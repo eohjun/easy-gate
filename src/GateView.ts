@@ -76,13 +76,14 @@ export class GateView extends ItemView {
         this.contentEl.empty()
         this.contentEl.addClass('open-gate-view')
 
-        // Create Top Bar (Tabs + Controls)
-        this.drawTopBar()
-
-        // Initialize AI & Clipping dropdowns (Desktop only)
+        // Initialize AI & Clipping dropdowns FIRST (Desktop only)
+        // Must be done BEFORE drawTopBar() so buttons can be created
         if (!this.useIframe) {
             this.initializeDropdowns()
         }
+
+        // Create Top Bar (Tabs + Controls) - uses dropdowns for buttons
+        this.drawTopBar()
 
         this.frameDoc = this.contentEl.doc
         this.createFrame()
