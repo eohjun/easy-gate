@@ -205,26 +205,11 @@ export function createClipButton(
     onQuickClip: () => void
 ): HTMLElement {
     const wrapper = container.createDiv({ cls: 'easy-gate-clip-btn-wrapper' })
-    wrapper.style.cssText = `
-        display: inline-flex;
-        align-items: center;
-        gap: 2px;
-    `
 
     // 메인 클립 버튼 (원클릭)
     const mainBtn = wrapper.createEl('button', { cls: 'easy-gate-clip-btn' })
     mainBtn.textContent = '📋'
     mainBtn.title = '클리핑 (클릭: 빠른 저장)'
-    mainBtn.style.cssText = `
-        padding: 4px 8px;
-        font-size: 14px;
-        background: var(--interactive-normal);
-        border: 1px solid var(--background-modifier-border);
-        border-right: none;
-        border-radius: 4px 0 0 4px;
-        cursor: pointer;
-        transition: background 0.2s;
-    `
     mainBtn.onclick = (e) => {
         e.preventDefault()
         onQuickClip()
@@ -234,29 +219,10 @@ export function createClipButton(
     const dropdownBtn = wrapper.createEl('button', { cls: 'easy-gate-clip-dropdown-btn' })
     dropdownBtn.textContent = '▼'
     dropdownBtn.title = '클리핑 옵션'
-    dropdownBtn.style.cssText = `
-        padding: 4px 6px;
-        font-size: 10px;
-        background: var(--interactive-normal);
-        border: 1px solid var(--background-modifier-border);
-        border-radius: 0 4px 4px 0;
-        cursor: pointer;
-        transition: background 0.2s;
-    `
     dropdownBtn.onclick = (e) => {
         e.preventDefault()
         dropdown.show(e)
     }
-
-    // 호버 효과
-    ;[mainBtn, dropdownBtn].forEach((btn) => {
-        btn.onmouseenter = () => {
-            btn.style.background = 'var(--interactive-hover)'
-        }
-        btn.onmouseleave = () => {
-            btn.style.background = 'var(--interactive-normal)'
-        }
-    })
 
     return wrapper
 }

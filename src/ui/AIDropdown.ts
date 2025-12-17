@@ -226,27 +226,15 @@ export function createAIButton(
     hasApiKey: boolean
 ): HTMLElement {
     const wrapper = container.createDiv({ cls: 'easy-gate-ai-btn-wrapper' })
-    wrapper.style.cssText = `
-        display: inline-flex;
-        align-items: center;
-        gap: 2px;
-    `
 
     // 메인 AI 버튼 (원클릭 요약)
     const mainBtn = wrapper.createEl('button', { cls: 'easy-gate-ai-btn' })
     mainBtn.textContent = '🤖'
-    mainBtn.title = hasApiKey ? 'AI 요약 (클릭: 빠른 요약)' : 'AI 기능 (API 키 설정 필요)'
-    mainBtn.style.cssText = `
-        padding: 4px 8px;
-        font-size: 14px;
-        background: var(--interactive-normal);
-        border: 1px solid var(--background-modifier-border);
-        border-right: none;
-        border-radius: 4px 0 0 4px;
-        cursor: ${hasApiKey ? 'pointer' : 'not-allowed'};
-        transition: background 0.2s;
-        opacity: ${hasApiKey ? '1' : '0.6'};
-    `
+    mainBtn.title = hasApiKey ? 'AI 요약' : 'API 키 필요'
+    if (!hasApiKey) {
+        mainBtn.style.opacity = '0.5'
+        mainBtn.style.cursor = 'not-allowed'
+    }
     mainBtn.onclick = (e) => {
         e.preventDefault()
         if (hasApiKey) {
@@ -258,31 +246,10 @@ export function createAIButton(
     const dropdownBtn = wrapper.createEl('button', { cls: 'easy-gate-ai-dropdown-btn' })
     dropdownBtn.textContent = '▼'
     dropdownBtn.title = 'AI 옵션'
-    dropdownBtn.style.cssText = `
-        padding: 4px 6px;
-        font-size: 10px;
-        background: var(--interactive-normal);
-        border: 1px solid var(--background-modifier-border);
-        border-radius: 0 4px 4px 0;
-        cursor: pointer;
-        transition: background 0.2s;
-    `
     dropdownBtn.onclick = (e) => {
         e.preventDefault()
         dropdown.show(e)
     }
-
-    // 호버 효과
-    ;[mainBtn, dropdownBtn].forEach((btn) => {
-        btn.onmouseenter = () => {
-            if (hasApiKey || btn === dropdownBtn) {
-                btn.style.background = 'var(--interactive-hover)'
-            }
-        }
-        btn.onmouseleave = () => {
-            btn.style.background = 'var(--interactive-normal)'
-        }
-    })
 
     return wrapper
 }

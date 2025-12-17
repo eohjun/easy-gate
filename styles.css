@@ -123,15 +123,15 @@ div[data-gate-id] .setting-item-name {
 }
 
 .gate-tab {
-    padding: 8px 12px;
+    padding: 5px 10px;
     cursor: pointer;
     display: flex;
     align-items: center;
     border-right: 1px solid var(--background-modifier-border);
-    font-size: 12px;
+    font-size: 11px;
     opacity: 0.7;
-    max-width: 180px;
-    min-width: 100px;
+    max-width: 140px;
+    min-width: 60px;
     position: relative;
     transition: all 0.2s ease;
 }
@@ -186,34 +186,86 @@ div[data-gate-id] .setting-item-name {
 }
 
 .gate-control-row {
-    padding: 6px 10px;
+    padding: 4px 8px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 4px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
 }
 
 .gate-address-input {
-    flex-grow: 1;
-    height: 28px;
+    flex: 1 1 120px;
+    min-width: 120px;
+    max-width: 300px;
+    height: 26px;
     border-radius: 4px;
+    font-size: 12px;
 }
 
 .gate-divider {
     width: 1px;
-    height: 18px;
+    height: 16px;
     background-color: var(--background-modifier-border);
-    margin: 0 4px;
+    margin: 0 2px;
+    flex-shrink: 0;
 }
 
 /* Enhance dropdown and button alignment */
 .gate-control-row select {
-    height: 28px;
+    height: 26px;
+    font-size: 11px;
+    padding: 0 4px;
+    flex-shrink: 0;
 }
 .gate-control-row button {
-    height: 28px;
-    padding: 0 10px;
+    height: 26px;
+    padding: 0 6px;
     display: flex;
     align-items: center;
+    flex-shrink: 0;
+    font-size: 12px;
+}
+
+/* AI & Clip Button Styles */
+.easy-gate-clip-btn-wrapper,
+.easy-gate-ai-btn-wrapper {
+    flex-shrink: 0 !important;
+    display: inline-flex !important;
+    align-items: center;
+    gap: 0;
+}
+
+.easy-gate-clip-btn,
+.easy-gate-ai-btn {
+    height: 26px !important;
+    padding: 0 8px !important;
+    font-size: 14px !important;
+    background: var(--interactive-normal);
+    border: 1px solid var(--background-modifier-border);
+    border-right: none;
+    border-radius: 4px 0 0 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.easy-gate-clip-dropdown-btn,
+.easy-gate-ai-dropdown-btn {
+    height: 26px !important;
+    padding: 0 5px !important;
+    font-size: 9px !important;
+    background: var(--interactive-normal);
+    border: 1px solid var(--background-modifier-border);
+    border-radius: 0 4px 4px 0;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.easy-gate-clip-btn:hover,
+.easy-gate-ai-btn:hover,
+.easy-gate-clip-dropdown-btn:hover,
+.easy-gate-ai-dropdown-btn:hover {
+    background: var(--interactive-hover);
 }
 
 /* Popup Modal */
