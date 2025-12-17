@@ -19,6 +19,8 @@ export class GateView extends ItemView {
     private plugin: OpenGatePlugin
     private topBarEl: HTMLElement
     private insertMode: 'cursor' | 'bottom' | 'new' = 'cursor'
+    // 현재 활성화된 게이트 상태 추적 (readonly options 대신 사용)
+    private currentGateState: { id: string; url: string; title: string }
 
     constructor(leaf: WorkspaceLeaf, options: GateFrameOption, plugin: OpenGatePlugin) {
         super(leaf)
@@ -27,6 +29,8 @@ export class GateView extends ItemView {
         this.plugin = plugin
         this.useIframe = Platform.isMobileApp
         this.frameReadyCallbacks = []
+        // 초기 상태 설정
+        this.currentGateState = { id: options.id, url: options.url, title: options.title }
     }
 
     addActions(): void {
@@ -142,7 +146,8 @@ export class GateView extends ItemView {
         for (const id in gates) {
             const gate = gates[id];
             const tab = container.createDiv({ cls: 'gate-tab' });
-            if (gate.id === this.options.id) tab.addClass('active');
+            // currentGateState를 사용하여 활성 탭 표시 (readonly options 수정 방지)
+            if (gate.id === this.currentGateState.id) tab.addClass('active');
 
             // Icon
             const iconContainer = tab.createSpan({ cls: 'gate-tab-icon' });
@@ -153,18 +158,13 @@ export class GateView extends ItemView {
 
             tab.addEventListener('click', () => {
                 this.navigateTo(gate.url);
-                // Also update settings/options if we want to switch context, 
-                // but conceptually we are just browsing in the same view.
-                // If we want to strictly switch 'profile', we might need to update this.options.
-                this.options.url = gate.url;
-                this.options.id = gate.id;
-                this.options.title = gate.title;
+                // currentGateState 업데이트 (readonly options 대신)
+                this.currentGateState.url = gate.url;
+                this.currentGateState.id = gate.id;
+                this.currentGateState.title = gate.title;
                 this.renderTabBar(container); // Re-render to update active state
             });
         }
-
-        // Add "+" button (Open Settings to add? Or just use quick address)
-        // For now, Quick Address is the way to add.
     }
 
     async handleAddressEnter(url: string) {

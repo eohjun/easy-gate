@@ -11,7 +11,8 @@ export const normalizeGateOption = (gate: Partial<GateFrameOption>): GateFrameOp
         if (gate.profileKey != undefined && gate.profileKey !== 'open-gate' && gate.profileKey !== '') {
             seedString += gate.profileKey
         }
-        gate.id = btoa(seedString)
+        // btoa()는 ASCII만 지원하므로 UTF-8 URL을 위해 encodeURIComponent 사용
+        gate.id = btoa(encodeURIComponent(seedString))
     }
 
     if (gate.profileKey === '' || gate.profileKey === undefined) {

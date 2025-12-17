@@ -21,7 +21,8 @@ export const registerGate = (plugin: Plugin, options: GateFrameOption) => {
     }
 
     plugin.addCommand({
-        id: `open-gate-${btoa(options.url)}`,
+        // btoa()는 ASCII만 지원하므로 UTF-8 URL을 위해 encodeURIComponent 사용
+        id: `open-gate-${btoa(encodeURIComponent(options.url))}`,
         name: `Open gate ${options.title}`,
         callback: async () => await openView(plugin.app.workspace, options.id, options.position)
     })

@@ -153,8 +153,6 @@ export default class OpenGatePlugin extends Plugin {
             }
         }
 
-        console.log(targetGate)
-
         const gate = await openView(this.app.workspace, targetGate?.id || 'temp-gate', targetGate?.position)
         const gateView = gate.view as GateView
         gateView?.onFrameReady(() => {
