@@ -7,10 +7,13 @@ import WebviewTag = Electron.WebviewTag;
 export class GatePopupModal extends Modal {
     private url: string;
     private frame: WebviewTag | HTMLIFrameElement;
+    private profileKey: string;
 
-    constructor(app: App, url: string) {
+    constructor(app: App, url: string, profileKey?: string) {
         super(app);
         this.url = url;
+        // OAuth 인증을 위해 부모 게이트와 동일한 세션 사용
+        this.profileKey = profileKey || 'default';
     }
 
     onOpen() {
@@ -34,7 +37,8 @@ export class GatePopupModal extends Modal {
             title: 'Popup',
             icon: 'globe',
             url: this.url,
-            // default other props
+            // OAuth 인증을 위해 부모 게이트와 동일한 profileKey 사용
+            profileKey: this.profileKey,
         };
 
         if (Platform.isMobileApp) {

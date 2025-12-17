@@ -282,12 +282,13 @@ export class GateView extends ItemView {
         } else {
             this.frame = createWebviewTag(this.options, onReady, this.frameDoc)
 
-            // Popup Handling
+            // Popup Handling - OAuth 로그인을 위해 부모 게이트의 profileKey 전달
             this.frame.addEventListener('new-window', (e) => {
                 // @ts-ignore
                 const url = e.url;
                 if (url) {
-                    new GatePopupModal(this.plugin.app, url).open();
+                    // 동일한 세션(profileKey)을 사용하여 OAuth 쿠키 공유
+                    new GatePopupModal(this.plugin.app, url, this.options.profileKey).open();
                 }
             });
 
