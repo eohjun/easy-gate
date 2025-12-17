@@ -1,0 +1,345 @@
+import { ItemView, WorkspaceLeaf, Menu, Notice, MarkdownView, setIcon, ButtonComponent, TextComponent, DropdownComponent } from 'obsidian'
+import { createWebviewTag } from './fns/createWebviewTag'
+import { Platform } from 'obsidian'
+import { createIframe } from './fns/createIframe'
+import { clipboard } from 'electron'
+import WebviewTag = Electron.WebviewTag
+import { GateFrameOption } from './GateOptions'
+import OpenGatePlugin from './main'
+import { GatePopupModal } from './GatePopupModal'
+import { normalizeGateOption } from './fns/normalizeGateOption'
+
+export class GateView extends ItemView {
+    private readonly options: GateFrameOption
+    private frame: WebviewTag | HTMLIFrameElement
+    private readonly useIframe: boolean = false
+    private frameReadyCallbacks: Function[]
+    private isFrameReady: boolean = false
+    private frameDoc: Document
+    private plugin: OpenGatePlugin
+    private topBarEl: HTMLElement
+    private insertMode: 'cursor' | 'bottom' | 'new' = 'cursor'
+
+    constructor(leaf: WorkspaceLeaf, options: GateFrameOption, plugin: OpenGatePlugin) {
+        super(leaf)
+        this.navigation = false
+        this.options = options
+        this.plugin = plugin
+        this.useIframe = Platform.isMobileApp
+        this.frameReadyCallbacks = []
+    }
+
+    addActions(): void {
+        this.addAction('refresh-ccw', 'Reload', () => {
+            if (this.frame instanceof HTMLIFrameElement) {
+                this.frame.contentWindow?.location.reload()
+            } else {
+                this.frame.reload()
+            }
+        })
+
+        this.addAction('home', 'Home page', () => {
+            this.navigateTo(this.options?.url ?? 'about:blank')
+        })
+    }
+
+    isWebviewFrame(): boolean {
+        return this.frame! instanceof HTMLIFrameElement
+    }
+
+    onload(): void {
+        super.onload()
+        this.addActions()
+
+        this.contentEl.empty()
+        this.contentEl.addClass('open-gate-view')
+
+        // Create Top Bar (Tabs + Controls)
+        this.drawTopBar()
+
+        this.frameDoc = this.contentEl.doc
+        this.createFrame()
+    }
+
+    private drawTopBar(): void {
+        this.topBarEl = this.contentEl.createDiv({ cls: 'gate-top-bar' });
+
+        // 1. Tab Bar (Gate Switcher)
+        const tabBar = this.topBarEl.createDiv({ cls: 'gate-tab-bar' });
+        this.renderTabBar(tabBar);
+
+        // 2. Control Row (Address + Actions)
+        const controlRow = this.topBarEl.createDiv({ cls: 'gate-control-row' });
+
+        // Navigation Buttons
+        new ButtonComponent(controlRow)
+            .setIcon('arrow-left')
+            .setTooltip('Back')
+            .onClick(() => {
+                if (!this.useIframe && (this.frame as WebviewTag).canGoBack()) {
+                    (this.frame as WebviewTag).goBack();
+                }
+            });
+
+        new ButtonComponent(controlRow)
+            .setIcon('arrow-right')
+            .setTooltip('Forward')
+            .onClick(() => {
+                if (!this.useIframe && (this.frame as WebviewTag).canGoForward()) {
+                    (this.frame as WebviewTag).goForward();
+                }
+            });
+
+        // Address Bar
+        const addressInput = new TextComponent(controlRow);
+        addressInput.setPlaceholder('https://...');
+        addressInput.inputEl.addClass('gate-address-input');
+        addressInput.setValue(this.options.url);
+        addressInput.inputEl.addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter') {
+                const url = addressInput.getValue();
+                if (url) {
+                    await this.handleAddressEnter(url);
+                }
+            }
+        });
+
+        // Current URL Listener to update address bar
+        this.onFrameReady(() => {
+            if (!this.useIframe) {
+                (this.frame as WebviewTag).addEventListener('did-navigate', (e) => {
+                    addressInput.setValue(e.url);
+                });
+                (this.frame as WebviewTag).addEventListener('did-navigate-in-page', (e) => {
+                    addressInput.setValue(e.url);
+                });
+            }
+        });
+
+        // Tools Divider
+        controlRow.createSpan({ cls: 'gate-divider' });
+
+        // Insert To Dropdown
+        const drop = new DropdownComponent(controlRow);
+        drop.addOption('cursor', 'Insert to: Cursor');
+        drop.addOption('bottom', 'Insert to: Bottom');
+        drop.addOption('new', 'Insert to: New Note');
+        drop.setValue('cursor');
+        drop.onChange((val) => this.insertMode = val as any);
+
+        // Apply Button
+        new ButtonComponent(controlRow)
+            .setIcon('download')
+            .setTooltip('Apply Selection')
+            .setButtonText('Apply')
+            .onClick(() => this.onApplyText());
+    }
+
+    private renderTabBar(container: HTMLElement) {
+        container.empty();
+        const gates = this.plugin.settings.gates;
+
+        for (const id in gates) {
+            const gate = gates[id];
+            const tab = container.createDiv({ cls: 'gate-tab' });
+            if (gate.id === this.options.id) tab.addClass('active');
+
+            // Icon
+            const iconContainer = tab.createSpan({ cls: 'gate-tab-icon' });
+            setIcon(iconContainer, gate.icon || 'globe');
+
+            // Title
+            tab.createSpan({ text: gate.title, cls: 'gate-tab-title' });
+
+            tab.addEventListener('click', () => {
+                this.navigateTo(gate.url);
+                // Also update settings/options if we want to switch context, 
+                // but conceptually we are just browsing in the same view.
+                // If we want to strictly switch 'profile', we might need to update this.options.
+                this.options.url = gate.url;
+                this.options.id = gate.id;
+                this.options.title = gate.title;
+                this.renderTabBar(container); // Re-render to update active state
+            });
+        }
+
+        // Add "+" button (Open Settings to add? Or just use quick address)
+        // For now, Quick Address is the way to add.
+    }
+
+    async handleAddressEnter(url: string) {
+        if (!url.startsWith('http')) {
+            url = 'https://' + url;
+        }
+
+        // Check if exists
+        const existing = this.plugin.findGateBy('url', url);
+        if (existing) {
+            this.navigateTo(existing.url);
+            new Notice(`Switched to ${existing.title}`);
+        } else {
+            // Create New Gate
+            const domain = new URL(url).hostname;
+            const newGate = normalizeGateOption({
+                id: Math.random().toString(36).substring(2, 15),
+                title: domain,
+                url: url,
+                icon: 'globe'
+            });
+            // We need to cast id as string if normalize expects it.
+
+            // Actually generateUuid is private in main.ts. 
+            // Ideally we expose it or Duplicate logic.
+            newGate.id = Math.random().toString(36).substring(2, 10);
+
+            await this.plugin.addGate(newGate);
+            new Notice(`New Gate Created: ${domain}`);
+
+            // Refresh Tab bar
+            const bar = this.topBarEl.querySelector('.gate-tab-bar') as HTMLElement;
+            if (bar) this.renderTabBar(bar);
+
+            this.navigateTo(url);
+        }
+    }
+
+    navigateTo(url: string) {
+        if (this.frame instanceof HTMLIFrameElement) {
+            this.frame.src = url;
+        } else {
+            this.frame.loadURL(url);
+        }
+    }
+
+    async onApplyText() {
+        let text = '';
+        if (this.frame instanceof HTMLIFrameElement) {
+            // Cannot easily get selection from cross-origin iframe
+            new Notice("Cannot extract text from IFrame mode (Mobile/Restricted).");
+            return;
+        } else {
+            try {
+                text = await (this.frame as WebviewTag).executeJavaScript('window.getSelection().toString()');
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        if (!text || text.trim() === '') {
+            new Notice('No text selected in the browser.');
+            return;
+        }
+
+        const activeView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
+
+        if (this.insertMode === 'new') {
+            const fileName = `Note ${new Date().toISOString().slice(0, 19).replace(/T|:/g, '-')}.md`;
+            const file = await this.plugin.app.vault.create(fileName, text);
+            await this.plugin.app.workspace.getLeaf('tab').openFile(file);
+            new Notice('Created new note with text.');
+            return;
+        }
+
+        if (!activeView) {
+            new Notice('No active Markdown note found to insert text.');
+            return;
+        }
+
+        const editor = activeView.editor;
+        if (this.insertMode === 'cursor') {
+            editor.replaceSelection(text);
+        } else if (this.insertMode === 'bottom') {
+            const lastLine = editor.lineCount();
+            editor.replaceRange('\n' + text, { line: lastLine, ch: 0 });
+        }
+
+        new Notice('Text applied!');
+    }
+
+    private createFrame(): void {
+        const onReady = () => {
+            if (!this.isFrameReady) {
+                this.isFrameReady = true
+                this.frameReadyCallbacks.forEach((callback) => callback())
+            }
+        }
+
+        if (this.useIframe) {
+            this.frame = createIframe(this.options, onReady)
+        } else {
+            this.frame = createWebviewTag(this.options, onReady, this.frameDoc)
+
+            // Popup Handling
+            this.frame.addEventListener('new-window', (e) => {
+                // @ts-ignore
+                const url = e.url;
+                if (url) {
+                    new GatePopupModal(this.plugin.app, url).open();
+                }
+            });
+
+            this.frame.addEventListener('destroyed', () => {
+
+                if (this.frameDoc != this.contentEl.doc) {
+                    if (this.frame) {
+                        this.frame.remove()
+                    }
+                    this.frameDoc = this.contentEl.doc
+                    this.createFrame()
+                }
+            })
+        }
+
+        this.contentEl.appendChild(this.frame as unknown as HTMLElement)
+    }
+
+    onunload(): void {
+        if (this.frame) {
+            this.frame.remove()
+        }
+        super.onunload()
+    }
+
+    // ... Menu handlers
+    onPaneMenu(menu: Menu, source: string): void {
+        super.onPaneMenu(menu, source)
+        // ... (Keep existing menu items if needed, or remove since we have UI)
+        // For brevity, keeping minimal default actions or just relying on UI.
+        // Let's keep Reload and Home.
+        menu.addItem((item) => {
+            item.setTitle('Reload')
+            item.setIcon('refresh-ccw')
+            item.onClick(() => {
+                if (this.frame instanceof HTMLIFrameElement) {
+                    this.frame.contentWindow?.location.reload()
+                } else {
+                    this.frame.reload()
+                }
+            })
+        })
+    }
+
+    getViewType(): string {
+        return this.options?.id ?? 'gate'
+    }
+
+    getDisplayText(): string {
+        return this.options?.title ?? 'Gate'
+    }
+
+    getIcon(): string {
+        return this.options?.icon ?? 'globe'
+    }
+
+    onFrameReady(callback: Function) {
+        if (this.isFrameReady) {
+            callback()
+        } else {
+            this.frameReadyCallbacks.push(callback)
+        }
+    }
+
+    async setUrl(url: string) {
+        this.navigateTo(url);
+    }
+}
