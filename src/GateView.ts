@@ -1297,7 +1297,8 @@ ${formattedText}
             } catch (error) {
                 console.error('Error creating note with metadata:', error);
                 // Fallback: 메타데이터 없이 기본 노트 생성
-                const fileName = `Note ${new Date().toISOString().slice(0, 19).replace(/T|:/g, '-')}.md`;
+                const baseFileName = `Note ${new Date().toISOString().slice(0, 19).replace(/T|:/g, '-')}.md`;
+                const fileName = await this.getUniqueFileName(baseFileName);
                 const file = await this.plugin.app.vault.create(fileName, formattedText);
                 await this.plugin.app.workspace.getLeaf('tab').openFile(file);
                 new Notice('Created new note with text.');
