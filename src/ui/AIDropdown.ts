@@ -19,7 +19,8 @@ export interface AIDropdownOptions {
     onAIWithTemplate: (templateId: string) => void
     onAIWithPrompt: (prompt: string) => void
     onAISelection: () => void
-    onOpenAnalysisModal: () => void
+    onOpenAnalysisModal: (templateId?: string) => void
+    onOpenMultiSourceModal: () => void  // 멀티 소스 분석 모달
     onOpenSettings: () => void
 }
 
@@ -34,7 +35,8 @@ export class AIDropdown {
     private onAIWithTemplate: (templateId: string) => void
     private onAIWithPrompt: (prompt: string) => void
     private onAISelection: () => void
-    private onOpenAnalysisModal: () => void
+    private onOpenAnalysisModal: (templateId?: string) => void
+    private onOpenMultiSourceModal: () => void
     private onOpenSettings: () => void
 
     constructor(options: AIDropdownOptions) {
@@ -46,6 +48,7 @@ export class AIDropdown {
         this.onAIWithPrompt = options.onAIWithPrompt
         this.onAISelection = options.onAISelection
         this.onOpenAnalysisModal = options.onOpenAnalysisModal
+        this.onOpenMultiSourceModal = options.onOpenMultiSourceModal
         this.onOpenSettings = options.onOpenSettings
     }
 
@@ -69,27 +72,7 @@ export class AIDropdown {
 
         menu.addSeparator()
 
-        // 헤더: AI 분석 옵션 안내
-        menu.addItem((item) =>
-            item
-                .setTitle('🤖 AI 분석 옵션')
-                .setDisabled(true)
-        )
-
-        menu.addSeparator()
-
-        // 📄 전체 페이지 AI 분석 (기본 동작)
-        menu.addItem((item) =>
-            item
-                .setTitle('📄 전체 페이지 분석')
-                .setIcon('sparkles')
-                .setDisabled(!hasApiKey)
-                .onClick(() => {
-                    this.onAISummary()
-                })
-        )
-
-        // ✂️ 선택 영역 AI 분석
+        // ✂️ 선택 영역 AI 분석 (주요 기능)
         menu.addItem((item) =>
             item
                 .setTitle('✂️ 선택 영역 분석')
@@ -102,14 +85,16 @@ export class AIDropdown {
 
         menu.addSeparator()
 
-        // 📚 템플릿 선택
-        menu.addItem((item) => item.setTitle('📋 템플릿 사용').setDisabled(true))
+        // 📚 템플릿으로 분석 모달 열기
+        menu.addItem((item) => item.setTitle('📋 템플릿으로 분석').setDisabled(true))
 
         const templates = [
             { id: 'basic-summary', label: '📋 기본 요약', icon: 'file-text' },
             { id: 'study-note', label: '📚 학습 노트', icon: 'book' },
             { id: 'analysis-report', label: '📊 분석 리포트', icon: 'bar-chart' },
-            { id: 'idea-note', label: '💡 아이디어 노트', icon: 'lightbulb' }
+            { id: 'idea-note', label: '💡 아이디어 노트', icon: 'lightbulb' },
+            { id: 'action-items', label: '✅ 액션 아이템', icon: 'check-square' },
+            { id: 'qa-format', label: '❓ Q&A 형식', icon: 'help-circle' }
         ]
 
         templates.forEach((template) => {
@@ -119,7 +104,8 @@ export class AIDropdown {
                     .setIcon(template.icon)
                     .setDisabled(!hasApiKey)
                     .onClick(() => {
-                        this.onAIWithTemplate(template.id)
+                        // 템플릿 선택 시 분석 모달 열기 (텍스트 확인/편집 가능)
+                        this.onOpenAnalysisModal(template.id)
                     })
             )
         })
@@ -150,6 +136,17 @@ export class AIDropdown {
                 .setIcon('search')
                 .onClick(() => {
                     this.onOpenAnalysisModal()
+                })
+        )
+
+        // 📊 멀티 소스 종합 분석 (NEW!)
+        menu.addItem((item) =>
+            item
+                .setTitle('📊 멀티 소스 종합 분석')
+                .setIcon('layers')
+                .setDisabled(!hasApiKey)
+                .onClick(() => {
+                    this.onOpenMultiSourceModal()
                 })
         )
 
@@ -231,15 +228,15 @@ export class AIDropdown {
 export function createAIButton(
     container: HTMLElement,
     dropdown: AIDropdown,
-    onQuickAI: () => void,
+    onOpenAnalysisModal: () => void,
     hasApiKey: boolean
 ): HTMLElement {
     const wrapper = container.createDiv({ cls: 'easy-gate-ai-btn-wrapper' })
 
-    // 메인 AI 버튼 (원클릭 분석)
+    // 메인 AI 버튼 (클릭시 분석 모달 열기)
     const mainBtn = wrapper.createEl('button', { cls: 'easy-gate-ai-btn' })
     mainBtn.textContent = '🤖'
-    mainBtn.title = hasApiKey ? 'AI 분석 (클릭: 전체 페이지 분석)' : 'API 키 필요'
+    mainBtn.title = hasApiKey ? 'AI 분석 모달 열기 (텍스트 입력/편집)' : 'API 키 필요'
     if (!hasApiKey) {
         mainBtn.style.opacity = '0.5'
         mainBtn.style.cursor = 'not-allowed'
@@ -247,7 +244,7 @@ export function createAIButton(
     mainBtn.onclick = (e) => {
         e.preventDefault()
         if (hasApiKey) {
-            onQuickAI()
+            onOpenAnalysisModal()
         }
     }
 

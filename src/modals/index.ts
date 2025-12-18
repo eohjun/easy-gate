@@ -11,3 +11,7 @@ export type { AnalysisModalOptions, AnalysisConfig } from './AnalysisModal'
 // Process Modal
 export { ProcessModal } from './ProcessModal'
 export type { ProcessModalOptions } from './ProcessModal'
+
+// Multi-Source Analysis Modal
+export { MultiSourceAnalysisModal } from './MultiSourceAnalysisModal'
+export type { MultiSourceAnalysisModalOptions } from './MultiSourceAnalysisModal'

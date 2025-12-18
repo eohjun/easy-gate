@@ -19,7 +19,9 @@ export interface AnalysisModalOptions {
     settings: AISettings
     savedPrompts: SavedPrompt[]
     clipData: ClipData
-    onAnalyze: (options: AnalysisConfig) => Promise<void>
+    initialText?: string // 선택된 텍스트 또는 초기 텍스트
+    initialTemplateId?: string // 초기 선택 템플릿
+    onAnalyze: (options: AnalysisConfig, content: string) => Promise<void>
     onSavePrompt?: (prompt: SavedPrompt) => void
 }
 
@@ -148,7 +150,7 @@ export class AnalysisModal extends Modal {
     private settings: AISettings
     private savedPrompts: SavedPrompt[]
     private clipData: ClipData
-    private onAnalyze: (options: AnalysisConfig) => Promise<void>
+    private onAnalyze: (options: AnalysisConfig, content: string) => Promise<void>
     private onSavePrompt?: (prompt: SavedPrompt) => void
 
     // UI State
@@ -157,11 +159,12 @@ export class AnalysisModal extends Modal {
     private selectedProvider: AIProviderType
     private includeMetadata: boolean = true
     private outputFormat: 'markdown' | 'summary' | 'bullets' | 'qa' = 'markdown'
+    private editableContent: string = '' // 편집 가능한 콘텐츠
 
     // UI Elements
     private promptTextArea: TextAreaComponent | null = null
     private templateContainer: HTMLElement | null = null
-    private previewContainer: HTMLElement | null = null
+    private contentTextArea: TextAreaComponent | null = null // 편집 가능한 콘텐츠 영역
 
     constructor(options: AnalysisModalOptions) {
         super(options.app)
@@ -171,6 +174,14 @@ export class AnalysisModal extends Modal {
         this.onAnalyze = options.onAnalyze
         this.onSavePrompt = options.onSavePrompt
         this.selectedProvider = options.settings.provider
+
+        // 초기 텍스트 설정 (선택된 텍스트 > clipData.content)
+        this.editableContent = options.initialText || options.clipData.content || ''
+
+        // 초기 템플릿 설정
+        if (options.initialTemplateId) {
+            this.selectedTemplateId = options.initialTemplateId
+        }
     }
 
     onOpen(): void {
@@ -218,47 +229,124 @@ export class AnalysisModal extends Modal {
     }
 
     /**
-     * 콘텐츠 미리보기 렌더링
+     * 콘텐츠 편집 영역 렌더링
      */
     private renderContentPreview(): void {
         const { contentEl } = this
 
         const previewSection = contentEl.createDiv({ cls: 'analysis-section preview-section' })
-        previewSection.createEl('h3', { text: '📝 콘텐츠 미리보기' })
 
-        this.previewContainer = previewSection.createDiv({ cls: 'content-preview' })
-        this.previewContainer.style.cssText = `
-            max-height: 150px;
-            overflow-y: auto;
-            padding: 12px;
-            background: var(--background-secondary);
-            border-radius: 8px;
-            font-size: 13px;
-            line-height: 1.5;
-            white-space: pre-wrap;
-            border: 1px solid var(--background-modifier-border);
+        // 헤더와 안내 텍스트
+        const headerRow = previewSection.createDiv({ cls: 'content-header-row' })
+        headerRow.style.cssText = `
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
         `
+        headerRow.createEl('h3', { text: '✏️ 분석할 텍스트' })
 
-        // 콘텐츠 길이 표시
-        const contentLength = this.clipData.content.length
-        const wordCount = this.clipData.content.split(/\s+/).filter(w => w).length
-        const tokenEstimate = Math.ceil(contentLength / 4)
+        // 붙여넣기 버튼
+        const pasteBtn = headerRow.createEl('button', {
+            text: '📋 클립보드에서 붙여넣기',
+            cls: 'paste-btn'
+        })
+        pasteBtn.style.cssText = `
+            padding: 4px 10px;
+            font-size: 11px;
+            border-radius: 4px;
+            border: 1px solid var(--background-modifier-border);
+            background: var(--background-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        `
+        pasteBtn.onclick = async () => {
+            try {
+                const text = await navigator.clipboard.readText()
+                if (text && this.contentTextArea) {
+                    this.editableContent = text
+                    this.contentTextArea.setValue(text)
+                    this.updateContentStats()
+                    showSuccess('클립보드에서 텍스트를 붙여넣었습니다.')
+                }
+            } catch (err) {
+                showWarning('클립보드에서 텍스트를 가져올 수 없습니다.')
+            }
+        }
 
-        const stats = previewSection.createDiv({ cls: 'content-stats' })
-        stats.style.cssText = `
+        // 안내 텍스트
+        const guide = previewSection.createEl('p', { cls: 'content-guide' })
+        guide.style.cssText = `
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+        `
+        guide.textContent = '분석할 텍스트를 직접 입력하거나, 선택한 텍스트를 편집할 수 있습니다.'
+
+        // 편집 가능한 텍스트 영역
+        const textAreaContainer = previewSection.createDiv({ cls: 'content-textarea-container' })
+        new Setting(textAreaContainer)
+            .setClass('content-textarea-setting')
+            .addTextArea(text => {
+                this.contentTextArea = text
+                text.setPlaceholder('분석할 텍스트를 여기에 입력하거나 붙여넣으세요...\n\n💡 팁: 웹페이지에서 텍스트를 드래그하여 선택한 후 이 모달을 열면 자동으로 표시됩니다.')
+                text.setValue(this.editableContent)
+                text.inputEl.style.cssText = `
+                    width: 100%;
+                    min-height: 150px;
+                    max-height: 250px;
+                    resize: vertical;
+                    font-size: 13px;
+                    line-height: 1.5;
+                    padding: 12px;
+                    border-radius: 8px;
+                    border: 1px solid var(--background-modifier-border);
+                    background: var(--background-primary);
+                `
+                text.onChange(value => {
+                    this.editableContent = value
+                    this.updateContentStats()
+                })
+            })
+
+        // 콘텐츠 통계 (동적 업데이트)
+        this.statsContainer = previewSection.createDiv({ cls: 'content-stats' })
+        this.statsContainer.style.cssText = `
             display: flex;
             gap: 16px;
             margin-top: 8px;
             font-size: 12px;
             color: var(--text-muted);
         `
-        stats.createSpan({ text: `📊 ${contentLength.toLocaleString()} 자` })
-        stats.createSpan({ text: `📝 ${wordCount.toLocaleString()} 단어` })
-        stats.createSpan({ text: `🎫 ~${tokenEstimate.toLocaleString()} 토큰` })
+        this.updateContentStats()
+    }
 
-        // 미리보기 텍스트
-        const previewText = this.clipData.content.substring(0, 500)
-        this.previewContainer.textContent = previewText + (contentLength > 500 ? '...' : '')
+    // 통계 컨테이너 참조
+    private statsContainer: HTMLElement | null = null
+
+    /**
+     * 콘텐츠 통계 업데이트
+     */
+    private updateContentStats(): void {
+        if (!this.statsContainer) return
+
+        const content = this.editableContent
+        const contentLength = content.length
+        const wordCount = content.split(/\s+/).filter(w => w).length
+        const tokenEstimate = Math.ceil(contentLength / 4)
+
+        this.statsContainer.empty()
+        this.statsContainer.createSpan({ text: `📊 ${contentLength.toLocaleString()} 자` })
+        this.statsContainer.createSpan({ text: `📝 ${wordCount.toLocaleString()} 단어` })
+        this.statsContainer.createSpan({ text: `🎫 ~${tokenEstimate.toLocaleString()} 토큰` })
+
+        // 내용이 없을 때 경고 표시
+        if (contentLength === 0) {
+            this.statsContainer.createSpan({
+                text: '⚠️ 분석할 텍스트를 입력하세요',
+                cls: 'stats-warning'
+            })
+        }
     }
 
     /**
@@ -553,7 +641,13 @@ export class AnalysisModal extends Modal {
      * 분석 시작
      */
     private async startAnalysis(): Promise<void> {
-        // 유효성 검사
+        // 콘텐츠 유효성 검사
+        if (!this.editableContent.trim()) {
+            showWarning('분석할 텍스트를 입력해주세요.')
+            return
+        }
+
+        // 템플릿/프롬프트 유효성 검사
         if (!this.selectedTemplateId && !this.customPrompt.trim()) {
             showWarning('템플릿을 선택하거나 커스텀 프롬프트를 입력해주세요.')
             return
@@ -575,7 +669,8 @@ export class AnalysisModal extends Modal {
         }
 
         this.close()
-        await this.onAnalyze(config)
+        // 편집된 콘텐츠를 함께 전달
+        await this.onAnalyze(config, this.editableContent.trim())
     }
 
     /**

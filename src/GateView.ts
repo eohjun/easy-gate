@@ -12,8 +12,8 @@ import { normalizeGateOption } from './fns/normalizeGateOption'
 import { ClipDropdown, createClipButton, AIDropdown, createAIButton, showSuccess, showError, showLoading } from './ui'
 import { ClipService, initializeClipService, getClipService, ContentExtractor } from './clipping'
 import { getAIService } from './ai'
-import { AnalysisModal, ProcessModal, AnalysisConfig } from './modals'
-import { ClipData } from './ai/types'
+import { AnalysisModal, ProcessModal, MultiSourceAnalysisModal, AnalysisConfig } from './modals'
+import { ClipData, MultiSourceAnalysisRequest, SourceItem } from './ai/types'
 
 export class GateView extends ItemView {
     private readonly options: GateFrameOption
@@ -112,7 +112,8 @@ export class GateView extends ItemView {
             onAIWithTemplate: (templateId: string) => this.handleAIWithTemplate(templateId),
             onAIWithPrompt: (prompt: string) => this.handleAIWithPrompt(prompt),
             onAISelection: () => this.handleAISelection(),
-            onOpenAnalysisModal: () => this.openAnalysisModal(),
+            onOpenAnalysisModal: (templateId?: string) => this.openAnalysisModal(templateId),
+            onOpenMultiSourceModal: () => this.openMultiSourceModal(),
             onOpenSettings: () => this.openAISettings()
         })
     }
@@ -519,8 +520,9 @@ ${response.content}
 
     /**
      * 분석 모달 열기
+     * @param templateId 초기 선택할 템플릿 ID (선택사항)
      */
-    private async openAnalysisModal(): Promise<void> {
+    private async openAnalysisModal(templateId?: string): Promise<void> {
         if (this.useIframe) {
             showError('Desktop 환경에서만 분석 기능이 가능합니다.')
             return
@@ -529,7 +531,18 @@ ${response.content}
         const loading = showLoading('콘텐츠 추출 중...')
 
         try {
-            // 콘텐츠 추출
+            // 선택된 텍스트 먼저 확인
+            let selectedText = ''
+            try {
+                const selection = await ContentExtractor.extractSelection(this.frame as WebviewTag)
+                if (selection && selection.hasSelection && selection.text) {
+                    selectedText = selection.text
+                }
+            } catch (e) {
+                // 선택 텍스트 추출 실패는 무시
+            }
+
+            // 페이지 콘텐츠 추출
             const content = await ContentExtractor.extractPageContent(this.frame as WebviewTag)
             const url = await ContentExtractor.getCurrentUrl(this.frame as WebviewTag)
 
@@ -553,14 +566,18 @@ ${response.content}
                 gateId: this.currentGateState.id
             }
 
-            // AnalysisModal 열기
+            // AnalysisModal 열기 (선택된 텍스트와 템플릿 ID 전달)
             const modal = new AnalysisModal({
                 app: this.app,
                 settings: this.plugin.settings.ai,
                 savedPrompts: this.plugin.settings.savedPrompts || [],
                 clipData: clipData,
-                onAnalyze: async (config: AnalysisConfig) => {
-                    await this.runAnalysis(clipData, config)
+                initialText: selectedText, // 선택된 텍스트 전달
+                initialTemplateId: templateId, // 초기 템플릿 전달
+                onAnalyze: async (config: AnalysisConfig, editedContent: string) => {
+                    // 편집된 콘텐츠로 clipData 업데이트
+                    const updatedClipData = { ...clipData, content: editedContent }
+                    await this.runAnalysis(updatedClipData, config)
                 },
                 onSavePrompt: (prompt) => {
                     this.savePromptToSettings(prompt)
@@ -595,15 +612,360 @@ ${response.content}
      */
     private async saveAnalysisResult(content: string, title: string): Promise<TFile | null> {
         try {
-            const fileName = `${title.replace(/[\\/:*?"<>|]/g, '-')}.md`
-            const file = await this.app.vault.create(fileName, content)
-            await this.app.workspace.getLeaf('tab').openFile(file)
+            const aiSettings = this.plugin.settings.ai
+            const folderPath = aiSettings.aiNotesFolder || 'AI-Notes'
+            const sanitizedTitle = title.replace(/[\\/:*?"<>|]/g, '-')
+            const fileName = `${sanitizedTitle}.md`
+            const filePath = `${folderPath}/${fileName}`
+
+            // 폴더가 없으면 생성
+            const folder = this.app.vault.getAbstractFileByPath(folderPath)
+            if (!folder) {
+                await this.app.vault.createFolder(folderPath)
+            }
+
+            // 파일 생성
+            const file = await this.app.vault.create(filePath, content)
+
+            // 자동 열기 설정이 활성화되어 있으면 노트 열기
+            if (aiSettings.autoOpenNote !== false) {
+                await this.app.workspace.getLeaf('tab').openFile(file)
+            }
+
+            showSuccess(`노트 저장 완료: ${filePath}`)
             return file
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : '저장 실패'
             showError(errorMessage)
             return null
         }
+    }
+
+    /**
+     * 멀티 소스 분석 모달 열기
+     */
+    private async openMultiSourceModal(): Promise<void> {
+        const loading = showLoading('멀티 소스 분석 준비 중...')
+
+        try {
+            // 현재 페이지 정보를 초기 소스로 추가
+            let initialClip: ClipData | undefined
+
+            if (!this.useIframe) {
+                try {
+                    const content = await ContentExtractor.extractPageContent(this.frame as WebviewTag)
+                    const url = await ContentExtractor.getCurrentUrl(this.frame as WebviewTag)
+
+                    if (content && content.textContent && content.textContent.trim().length > 0) {
+                        initialClip = {
+                            id: `multi-source-${Date.now()}`,
+                            url: url,
+                            title: content.title || this.options.title || 'Untitled',
+                            content: content.textContent,
+                            metadata: {
+                                siteName: content.siteName || this.extractSiteName(url)
+                            },
+                            clippedAt: new Date().toISOString(),
+                            gateId: this.currentGateState.id
+                        }
+                    }
+                } catch (e) {
+                    console.log('[MultiSource] 현재 페이지 콘텐츠 추출 실패:', e)
+                }
+            }
+
+            loading.hide()
+
+            const modal = new MultiSourceAnalysisModal({
+                app: this.app,
+                settings: this.plugin.settings.ai,
+                initialClip: initialClip,
+                onAnalyze: async (request: MultiSourceAnalysisRequest) => {
+                    await this.runMultiSourceAnalysis(request)
+                }
+            })
+            modal.open()
+
+        } catch (error) {
+            loading.hide()
+            const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류'
+            showError(`멀티 소스 분석 오류: ${errorMessage}`)
+        }
+    }
+
+    /**
+     * 사이트 이름 추출
+     */
+    private extractSiteName(url: string): string {
+        try {
+            const urlObj = new URL(url)
+            let hostname = urlObj.hostname.replace(/^www\./, '')
+            // 주요 사이트 이름 매핑
+            const siteNames: Record<string, string> = {
+                'youtube.com': 'YouTube',
+                'github.com': 'GitHub',
+                'twitter.com': 'Twitter',
+                'x.com': 'X (Twitter)',
+                'reddit.com': 'Reddit',
+                'medium.com': 'Medium',
+                'notion.so': 'Notion',
+                'naver.com': 'Naver',
+                'tistory.com': 'Tistory',
+                'velog.io': 'Velog',
+                'brunch.co.kr': 'Brunch',
+                'google.com': 'Google',
+                'docs.google.com': 'Google Docs',
+                'wikipedia.org': 'Wikipedia'
+            }
+            return siteNames[hostname] || hostname
+        } catch {
+            return 'Unknown'
+        }
+    }
+
+    /**
+     * 멀티 소스 AI 분석 실행
+     */
+    private async runMultiSourceAnalysis(request: MultiSourceAnalysisRequest): Promise<void> {
+        const loading = showLoading('멀티 소스 분석 중...')
+
+        try {
+            const aiSettings = this.plugin.settings.ai
+            const provider = aiSettings.provider
+            const apiKey = aiSettings.apiKeys[provider]
+
+            if (!apiKey) {
+                throw new Error(`${provider} API 키가 설정되지 않았습니다.`)
+            }
+
+            // 소스들을 결합하여 컨텍스트 생성
+            const sourcesContext = request.sources.map((source: SourceItem, index: number) => {
+                const sourceInfo = `[소스 ${index + 1}] ${source.title}
+타입: ${source.type === 'web-clip' ? '웹 클리핑' : source.type === 'obsidian-note' ? '옵시디언 노트' : source.type === 'selection' ? '선택 텍스트' : '직접 입력'}
+${source.metadata.url ? `URL: ${source.metadata.url}` : ''}
+${source.metadata.filePath ? `파일: ${source.metadata.filePath}` : ''}
+글자 수: ${source.metadata.charCount}자
+
+내용:
+${source.content}
+`
+                return sourceInfo
+            }).join('\n---\n\n')
+
+            // 분석 타입에 따른 기본 프롬프트
+            const analysisTypePrompts: Record<string, string> = {
+                'synthesis': '여러 소스의 정보를 종합하여 통합된 관점을 제시해주세요. 공통점, 핵심 인사이트, 그리고 새로운 통찰을 도출해주세요.',
+                'comparison': '각 소스의 관점을 비교 분석해주세요. 유사점과 차이점, 각각의 강점과 약점을 분석해주세요.',
+                'summary': '모든 소스의 핵심 내용을 간결하게 요약해주세요. 주요 포인트와 결론을 정리해주세요.',
+                'custom': ''
+            }
+
+            const basePrompt = analysisTypePrompts[request.analysisType] || ''
+            const fullPrompt = request.customPrompt
+                ? `${request.customPrompt}\n\n${basePrompt}`
+                : basePrompt
+
+            const systemPrompt = `당신은 다중 소스 분석 전문가입니다. 여러 출처의 정보를 분석하고 통합하는 역할을 합니다.
+
+분석 시 다음 사항을 고려하세요:
+1. 각 소스의 신뢰성과 관점을 평가
+2. 소스 간의 관계와 상호 보완성 파악
+3. 핵심 인사이트와 패턴 도출
+4. 명확하고 구조화된 분석 결과 제공
+
+출력 형식: 마크다운
+언어: ${request.language || 'ko'}
+${request.includeSourceReferences ? '각 인용이나 정보에 출처를 명시해주세요.' : ''}`
+
+            const userPrompt = `${fullPrompt}
+
+=== 분석할 소스들 (${request.sources.length}개) ===
+
+${sourcesContext}
+
+=== 분석 요청 ===
+위의 ${request.sources.length}개 소스를 종합적으로 분석해주세요.`
+
+            // AI API 호출
+            const result = await this.callMultiSourceAI(provider, apiKey, systemPrompt, userPrompt)
+
+            loading.hide()
+
+            // 결과를 노트로 저장
+            const sourceRefs = request.sources.map((s: SourceItem) => {
+                if (s.metadata.url) {
+                    return `- [${s.title}](${s.metadata.url})`
+                } else if (s.metadata.filePath) {
+                    return `- [[${s.metadata.filePath}|${s.title}]]`
+                }
+                return `- ${s.title}`
+            }).join('\n')
+
+            const analysisTypeNames: Record<string, string> = {
+                'synthesis': '종합 분석',
+                'comparison': '비교 분석',
+                'summary': '요약',
+                'custom': '커스텀 분석'
+            }
+
+            const noteContent = `---
+type: multi-source-analysis
+analysis-type: ${request.analysisType}
+sources-count: ${request.sources.length}
+total-chars: ${request.sources.reduce((acc: number, s: SourceItem) => acc + s.metadata.charCount, 0)}
+provider: ${provider}
+created: ${new Date().toISOString()}
+---
+
+# 멀티 소스 ${analysisTypeNames[request.analysisType]}
+
+## 분석 개요
+- **분석 유형**: ${analysisTypeNames[request.analysisType]}
+- **소스 수**: ${request.sources.length}개
+- **총 분석 문자 수**: ${request.sources.reduce((acc: number, s: SourceItem) => acc + s.metadata.charCount, 0).toLocaleString()}자
+- **AI 모델**: ${provider}
+- **분석 일시**: ${new Date().toLocaleString('ko-KR')}
+
+## 분석 결과
+
+${result}
+
+## 분석에 사용된 소스
+
+${sourceRefs}
+
+---
+*이 분석은 Easy Gate 멀티 소스 분석 기능으로 생성되었습니다.*
+`
+
+            const title = `멀티소스_${analysisTypeNames[request.analysisType]}_${new Date().toISOString().split('T')[0]}`
+            await this.saveAnalysisResult(noteContent, title)
+
+        } catch (error) {
+            loading.hide()
+            const errorMessage = error instanceof Error ? error.message : '분석 실패'
+            showError(`멀티 소스 분석 오류: ${errorMessage}`)
+        }
+    }
+
+    /**
+     * 멀티 소스 AI API 호출
+     */
+    private async callMultiSourceAI(
+        provider: string,
+        apiKey: string,
+        systemPrompt: string,
+        userPrompt: string
+    ): Promise<string> {
+        const endpoints: Record<string, string> = {
+            'gemini': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+            'grok': 'https://api.x.ai/v1/chat/completions',
+            'claude': 'https://api.anthropic.com/v1/messages',
+            'openai': 'https://api.openai.com/v1/chat/completions',
+            'glm': 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
+        }
+
+        const endpoint = endpoints[provider]
+        if (!endpoint) {
+            throw new Error(`지원하지 않는 AI 제공자: ${provider}`)
+        }
+
+        // 기본 설정값
+        const temperature = 0.7
+        const maxTokens = 8192
+
+        let response: Response
+        let result: string
+
+        switch (provider) {
+            case 'gemini':
+                response = await fetch(`${endpoint}?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
+                        generationConfig: {
+                            temperature: temperature,
+                            maxOutputTokens: maxTokens
+                        }
+                    })
+                })
+                const geminiData = await response.json()
+                result = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || ''
+                break
+
+            case 'grok':
+            case 'openai':
+                response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: provider === 'grok' ? 'grok-3-latest' : 'gpt-4o-mini',
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: userPrompt }
+                        ],
+                        temperature: temperature,
+                        max_tokens: maxTokens
+                    })
+                })
+                const openaiData = await response.json()
+                result = openaiData.choices?.[0]?.message?.content || ''
+                break
+
+            case 'claude':
+                response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-api-key': apiKey,
+                        'anthropic-version': '2023-06-01',
+                        'anthropic-dangerous-direct-browser-access': 'true'
+                    },
+                    body: JSON.stringify({
+                        model: 'claude-sonnet-4-20250514',
+                        max_tokens: maxTokens,
+                        system: systemPrompt,
+                        messages: [{ role: 'user', content: userPrompt }]
+                    })
+                })
+                const claudeData = await response.json()
+                result = claudeData.content?.[0]?.text || ''
+                break
+
+            case 'glm':
+                response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'glm-4-flash',
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: userPrompt }
+                        ],
+                        temperature: temperature,
+                        max_tokens: maxTokens
+                    })
+                })
+                const glmData = await response.json()
+                result = glmData.choices?.[0]?.message?.content || ''
+                break
+
+            default:
+                throw new Error(`지원하지 않는 AI 제공자: ${provider}`)
+        }
+
+        if (!result) {
+            throw new Error('AI 응답을 받지 못했습니다.')
+        }
+
+        return result
     }
 
     /**
@@ -731,7 +1093,7 @@ ${response.content}
                 createAIButton(
                     controlRow,
                     this.aiDropdown,
-                    () => this.handleAISummary(),
+                    () => this.openAnalysisModal(), // 분석 모달 열기로 변경
                     hasApiKey
                 )
             }

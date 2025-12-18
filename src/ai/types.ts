@@ -72,6 +72,8 @@ export interface AISettings {
     defaultLanguage: string
     defaultTemplate: string
     autoTags: boolean
+    aiNotesFolder: string // AI 생성 노트 저장 폴더
+    autoOpenNote: boolean // 노트 생성 후 자동으로 열기
 }
 
 export const DEFAULT_AI_SETTINGS: AISettings = {
@@ -88,7 +90,9 @@ export const DEFAULT_AI_SETTINGS: AISettings = {
     customModel: '',
     defaultLanguage: '한국어',
     defaultTemplate: 'basic-summary',
-    autoTags: true
+    autoTags: true,
+    aiNotesFolder: 'AI-Notes', // 기본 AI 노트 폴더
+    autoOpenNote: true // 기본값: 노트 생성 후 자동 열기
 }
 
 // ============================================
@@ -289,3 +293,87 @@ export interface AIErrorEvent {
 }
 
 export type AIEvent = AIProgressEvent | AICompleteEvent | AIErrorEvent
+
+// ============================================
+// Multi-Source Analysis Types
+// ============================================
+
+/**
+ * 소스 유형
+ */
+export type SourceType = 'web-clip' | 'obsidian-note' | 'selection' | 'manual-input'
+
+/**
+ * 소스 메타데이터
+ */
+export interface SourceMetadata {
+    // 웹 클리핑용
+    url?: string
+    siteName?: string
+    author?: string
+    publishedDate?: string
+
+    // 옵시디언 노트용
+    filePath?: string
+    tags?: string[]
+
+    // 공통
+    charCount: number
+    wordCount: number
+    language?: string
+}
+
+/**
+ * 분석할 개별 소스 아이템
+ */
+export interface SourceItem {
+    id: string
+    type: SourceType
+    title: string
+    content: string
+    metadata: SourceMetadata
+    addedAt: string
+}
+
+/**
+ * 멀티 소스 분석 유형
+ */
+export type MultiSourceAnalysisType = 'synthesis' | 'comparison' | 'summary' | 'custom'
+
+/**
+ * 멀티 소스 분석 요청
+ */
+export interface MultiSourceAnalysisRequest {
+    sources: SourceItem[]
+    customPrompt: string
+    analysisType: MultiSourceAnalysisType
+    outputFormat: 'markdown' | 'structured'
+    includeSourceReferences: boolean
+    language: string
+}
+
+/**
+ * 소스 참조 정보 (결과물에 포함)
+ */
+export interface SourceReference {
+    sourceId: string
+    sourceTitle: string
+    sourceType: SourceType
+    url?: string
+    filePath?: string
+}
+
+/**
+ * 멀티 소스 분석 결과
+ */
+export interface MultiSourceAnalysisResult {
+    content: string
+    sourceReferences: SourceReference[]
+    metadata: {
+        totalSources: number
+        totalCharacters: number
+        processingTime: number
+        model: string
+        provider: AIProviderType
+    }
+}
