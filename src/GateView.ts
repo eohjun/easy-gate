@@ -276,7 +276,8 @@ export class GateView extends ItemView {
                 // 요약 결과를 새 노트로 생성 (YAML frontmatter 포함)
                 const timestamp = new Date().toISOString().split('T')[0]
                 const currentUrl = await ContentExtractor.getCurrentUrl(this.frame as WebviewTag)
-                const fileName = `AI 요약 - ${content.title || 'Untitled'} - ${timestamp}.md`
+                const baseFileName = `AI 요약 - ${content.title || 'Untitled'} - ${timestamp}.md`
+                const fileName = await this.getUniqueFileName(baseFileName)
 
                 // YAML frontmatter가 포함된 노트 내용 생성
                 const noteContent = `---
@@ -421,7 +422,8 @@ ${response.content}
             if (response.success) {
                 const timestamp = new Date().toISOString().split('T')[0]
                 const currentUrl = await ContentExtractor.getCurrentUrl(this.frame as WebviewTag)
-                const fileName = `AI 분석 - ${content.title || 'Untitled'} - ${timestamp}.md`
+                const baseFileName = `AI 분석 - ${content.title || 'Untitled'} - ${timestamp}.md`
+                const fileName = await this.getUniqueFileName(baseFileName)
 
                 // YAML frontmatter가 포함된 노트 내용 생성
                 const noteContent = `---
@@ -615,14 +617,15 @@ ${response.content}
             const aiSettings = this.plugin.settings.ai
             const folderPath = aiSettings.aiNotesFolder || 'AI-Notes'
             const sanitizedTitle = title.replace(/[\\/:*?"<>|]/g, '-')
-            const fileName = `${sanitizedTitle}.md`
-            const filePath = `${folderPath}/${fileName}`
 
             // 폴더가 없으면 생성
             const folder = this.app.vault.getAbstractFileByPath(folderPath)
             if (!folder) {
                 await this.app.vault.createFolder(folderPath)
             }
+
+            // 고유한 파일 경로 생성 (중복 방지)
+            const filePath = await this.getUniqueFilePath(folderPath, sanitizedTitle)
 
             // 파일 생성
             const file = await this.app.vault.create(filePath, content)
@@ -639,6 +642,38 @@ ${response.content}
             showError(errorMessage)
             return null
         }
+    }
+
+    /**
+     * 폴더 내 고유한 파일 경로 생성
+     * 파일이 이미 존재하면 (1), (2), ... 숫자를 붙여 고유하게 만듦
+     */
+    private async getUniqueFilePath(folderPath: string, baseName: string): Promise<string> {
+        const extension = '.md'
+        let filePath = `${folderPath}/${baseName}${extension}`
+
+        // 파일이 존재하지 않으면 원래 경로 반환
+        if (!this.plugin.app.vault.getAbstractFileByPath(filePath)) {
+            return filePath
+        }
+
+        // 파일이 존재하면 숫자를 붙여 고유하게 만듦
+        let counter = 1
+        filePath = `${folderPath}/${baseName} (${counter})${extension}`
+
+        while (this.plugin.app.vault.getAbstractFileByPath(filePath)) {
+            counter++
+            filePath = `${folderPath}/${baseName} (${counter})${extension}`
+
+            // 무한 루프 방지 (최대 100개)
+            if (counter > 100) {
+                const timestamp = Date.now()
+                filePath = `${folderPath}/${baseName} - ${timestamp}${extension}`
+                break
+            }
+        }
+
+        return filePath
     }
 
     /**

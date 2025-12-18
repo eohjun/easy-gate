@@ -43,8 +43,9 @@ export class NoteGenerator {
             // 폴더 생성 (없으면)
             await this.ensureFolder(folderPath)
 
-            // 파일 경로
-            const filePath = normalizePath(`${folderPath}/${filename}.md`)
+            // 파일 경로 (중복 방지)
+            const basePath = normalizePath(`${folderPath}/${filename}.md`)
+            const filePath = await this.getUniqueFilePath(basePath)
 
             // 파일 생성
             const file = await this.vault.create(filePath, content)
@@ -88,7 +89,9 @@ export class NoteGenerator {
 
             await this.ensureFolder(folderPath)
 
-            const filePath = normalizePath(`${folderPath}/${filename}.md`)
+            // 파일 경로 (중복 방지)
+            const basePath = normalizePath(`${folderPath}/${filename}.md`)
+            const filePath = await this.getUniqueFilePath(basePath)
             const file = await this.vault.create(filePath, content)
 
             return {
