@@ -1,6 +1,5 @@
 import WebviewTag = Electron.WebviewTag
 import { GateFrameOption } from '../GateOptions'
-import getDefaultUserAgent from './getDefaultUserAgent'
 
 // Constants for repeated strings
 const DEFAULT_URL = 'about:blank'
@@ -18,8 +17,11 @@ export const createWebviewTag = (params: Partial<GateFrameOption>, onReady?: () 
     webviewTag.setAttribute('allowpopups', 'true')
     webviewTag.addClass(OPEN_GATE_WEBVIEW_CLASS)
 
-    // Set user agent (use default Chrome UA if not provided to avoid bot detection)
-    webviewTag.setAttribute('useragent', params.userAgent || getDefaultUserAgent())
+    // Only set user agent if explicitly provided by user
+    // Using Electron's default UA may work better with Google services
+    if (params.userAgent) {
+        webviewTag.setAttribute('useragent', params.userAgent)
+    }
 
     webviewTag.addEventListener('dom-ready', async () => {
         // Set zoom factor if provided
