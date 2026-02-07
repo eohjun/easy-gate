@@ -2,11 +2,11 @@ import { GateView } from '../GateView'
 import { openView } from './openView'
 import { addIcon, Plugin } from 'obsidian'
 import { GateFrameOption } from '../GateOptions'
+import OpenGatePlugin from '../main'
 
 export const registerGate = (plugin: Plugin, options: GateFrameOption) => {
     plugin.registerView(options.id, (leaf) => {
-        // @ts-ignore
-        return new GateView(leaf, options, plugin)
+        return new GateView(leaf, options, plugin as OpenGatePlugin)
     })
 
     let iconName = options.icon

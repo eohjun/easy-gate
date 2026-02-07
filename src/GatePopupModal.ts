@@ -42,10 +42,8 @@ export class GatePopupModal extends Modal {
         };
 
         if (Platform.isMobileApp) {
-            // @ts-ignore
             this.frame = createIframe(options, onReady);
         } else {
-            // @ts-ignore
             this.frame = createWebviewTag(options, onReady, contentEl.doc);
         }
 
@@ -53,6 +51,10 @@ export class GatePopupModal extends Modal {
     }
 
     onClose() {
+        if (this.frame) {
+            this.frame.remove()
+            this.frame = null as any
+        }
         const { contentEl } = this;
         contentEl.empty();
     }

@@ -47,6 +47,7 @@ export class ProcessModal extends Modal {
 
     // Markdown rendering component
     private renderComponent: Component
+    private styleEl: HTMLStyleElement | null = null
 
     constructor(options: ProcessModalOptions) {
         super(options.app)
@@ -82,7 +83,18 @@ export class ProcessModal extends Modal {
     onClose(): void {
         const { contentEl } = this
         contentEl.empty()
-        this.renderComponent.unload()
+        try {
+            this.renderComponent.unload()
+        } finally {
+            if (this.styleEl) {
+                this.styleEl.remove()
+                this.styleEl = null
+            }
+            this.statusEl = null
+            this.progressEl = null
+            this.resultEl = null
+            this.actionsEl = null
+        }
     }
 
     /**
@@ -232,14 +244,14 @@ export class ProcessModal extends Modal {
         loadingEl.createSpan({ text: 'AI 응답 대기 중...' }).style.marginTop = '12px'
 
         // 스핀 애니메이션
-        const style = document.createElement('style')
-        style.textContent = `
+        this.styleEl = document.createElement('style')
+        this.styleEl.textContent = `
             @keyframes spin {
                 from { transform: rotate(0deg); }
                 to { transform: rotate(360deg); }
             }
         `
-        document.head.appendChild(style)
+        document.head.appendChild(this.styleEl)
     }
 
     /**

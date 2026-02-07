@@ -27,8 +27,13 @@ export class ModalListGates extends Modal {
                 iconSvg.classList.add('svg-icon')
                 container.appendChild(iconSvg)
             } else {
-                //@ts-ignore-next-line
-                container.createEl('svg', { cls: 'svg-icon' }).innerHTML = gate.icon
+                const parser = new DOMParser()
+                const doc = parser.parseFromString(gate.icon, 'image/svg+xml')
+                const svgEl = doc.documentElement
+                if (svgEl && svgEl.tagName === 'svg') {
+                    svgEl.classList.add('svg-icon')
+                    container.appendChild(svgEl)
+                }
             }
 
             container.createEl('span', { text: gate.title })

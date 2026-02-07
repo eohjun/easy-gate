@@ -27,11 +27,17 @@ export abstract class BaseProvider implements AIProvider {
      * HTTP 요청 헬퍼 (Obsidian의 requestUrl 사용)
      */
     protected async makeRequest<T>(
-        url: string,
-        options: RequestUrlParam
+        _url: string,
+        options: RequestUrlParam,
+        timeoutMs: number = 15000
     ): Promise<T> {
         try {
-            const response = await requestUrl(options)
+            const response = await Promise.race([
+                requestUrl(options),
+                new Promise<never>((_, reject) =>
+                    setTimeout(() => reject(new Error('Request timed out')), timeoutMs)
+                )
+            ])
             return response.json as T
         } catch (error) {
             if (error instanceof Error) {

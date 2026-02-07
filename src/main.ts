@@ -1,5 +1,5 @@
 import { Notice, ObsidianProtocolData, Plugin } from 'obsidian'
-import { SettingTab } from './SetingTab'
+import { SettingTab } from './SettingTab'
 import { registerGate } from './fns/registerGate'
 import { ModalEditGate } from './ModalEditGate'
 import { ModalOnBoarding } from './ModalOnboarding'

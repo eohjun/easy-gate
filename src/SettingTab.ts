@@ -154,15 +154,21 @@ export class SettingTab extends PluginSettingTab {
         // 안내 메시지
         const infoEl = containerEl.createEl('div', { cls: 'setting-item-description' })
         infoEl.style.cssText = 'margin-bottom: 16px; padding: 12px; background: var(--background-secondary); border-radius: 8px;'
-        infoEl.innerHTML = `
-            <p style="margin: 0 0 8px 0;"><strong>📌 사용 방법:</strong></p>
-            <ol style="margin: 0; padding-left: 20px;">
-                <li>사용할 AI Provider의 API 키를 입력하세요</li>
-                <li><strong>저장</strong> 버튼을 눌러 API 키를 저장하세요</li>
-                <li><strong>테스트</strong> 버튼으로 연결을 확인하세요</li>
-                <li>아래 "기본 AI Provider"에서 사용할 Provider를 선택하세요</li>
-            </ol>
-        `
+
+        const infoTitle = infoEl.createEl('p', { cls: 'setting-item-description' })
+        infoTitle.style.cssText = 'margin: 0 0 8px 0;'
+        infoTitle.createEl('strong', { text: '📌 사용 방법:' })
+
+        const infoList = infoEl.createEl('ol')
+        infoList.style.cssText = 'margin: 0; padding-left: 20px;'
+        infoList.createEl('li', { text: '사용할 AI Provider의 API 키를 입력하세요' })
+        const li2 = infoList.createEl('li')
+        li2.createEl('strong', { text: '저장' })
+        li2.appendText(' 버튼을 눌러 API 키를 저장하세요')
+        const li3 = infoList.createEl('li')
+        li3.createEl('strong', { text: '테스트' })
+        li3.appendText(' 버튼으로 연결을 확인하세요')
+        infoList.createEl('li', { text: '아래 "기본 AI Provider"에서 사용할 Provider를 선택하세요' })
 
         const providerIds = Object.keys(AI_PROVIDERS) as AIProviderType[]
 
@@ -246,14 +252,14 @@ export class SettingTab extends PluginSettingTab {
                 button
                     .setIcon('pencil')
                     .setTooltip('모델 변경')
-                    .onClick(() => {
+                    .onClick(async () => {
                         const newModel = prompt(
                             `${providerConfig.displayName} 모델명을 입력하세요:`,
                             currentModel
                         )
                         if (newModel && newModel.trim().length > 0) {
                             this.plugin.settings.ai.models[providerId] = newModel.trim()
-                            this.plugin.saveSettings()
+                            await this.plugin.saveSettings()
                             this.display()
                         }
                     })
@@ -291,11 +297,15 @@ export class SettingTab extends PluginSettingTab {
         if (configuredProviders.length > 0) {
             const statusEl = containerEl.createEl('div', { cls: 'setting-item-description' })
             statusEl.style.cssText = 'margin-bottom: 12px; padding: 8px 12px; background: var(--background-modifier-success); border-radius: 6px; color: var(--text-success);'
-            statusEl.innerHTML = `✅ <strong>${configuredProviders.length}개</strong>의 Provider가 설정되어 있습니다: ${configuredProviders.map(id => AI_PROVIDERS[id].displayName).join(', ')}`
+            statusEl.appendText('✅ ')
+            statusEl.createEl('strong', { text: `${configuredProviders.length}개` })
+            statusEl.appendText(`의 Provider가 설정되어 있습니다: ${configuredProviders.map(id => AI_PROVIDERS[id].displayName).join(', ')}`)
         } else {
             const statusEl = containerEl.createEl('div', { cls: 'setting-item-description' })
             statusEl.style.cssText = 'margin-bottom: 12px; padding: 8px 12px; background: var(--background-modifier-error); border-radius: 6px; color: var(--text-error);'
-            statusEl.innerHTML = '⚠️ 위에서 API 키를 설정하고 <strong>저장</strong> 버튼을 눌러주세요.'
+            statusEl.appendText('⚠️ 위에서 API 키를 설정하고 ')
+            statusEl.createEl('strong', { text: '저장' })
+            statusEl.appendText(' 버튼을 눌러주세요.')
         }
 
         new Setting(containerEl)
@@ -519,7 +529,7 @@ export class SettingTab extends PluginSettingTab {
     /**
      * 프롬프트 편집
      */
-    private editPrompt(index: number): void {
+    private async editPrompt(index: number): Promise<void> {
         const prompt = this.plugin.settings.savedPrompts[index]
         const newName = window.prompt('프롬프트 이름:', prompt.name)
         if (newName === null) return
@@ -533,14 +543,14 @@ export class SettingTab extends PluginSettingTab {
             prompt: newPromptText.trim() || prompt.prompt
         }
 
-        this.plugin.saveSettings()
+        await this.plugin.saveSettings()
         this.display()
     }
 
     /**
      * 새 프롬프트 추가
      */
-    private addNewPrompt(): void {
+    private async addNewPrompt(): Promise<void> {
         const name = window.prompt('새 프롬프트 이름:')
         if (!name || name.trim().length === 0) return
 
@@ -554,7 +564,7 @@ export class SettingTab extends PluginSettingTab {
         }
 
         this.plugin.settings.savedPrompts.push(newPrompt)
-        this.plugin.saveSettings()
+        await this.plugin.saveSettings()
         this.display()
     }
 }

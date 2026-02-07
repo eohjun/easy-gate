@@ -31,6 +31,11 @@ export class GateView extends ItemView {
     private clipDropdown: ClipDropdown | null = null
     private aiDropdown: AIDropdown | null = null
     private clipService: ClipService | null = null
+    // Event listener references for cleanup
+    private newWindowListener: ((e: Event) => void) | null = null
+    private destroyedListener: (() => void) | null = null
+    private didNavigateListener: ((e: any) => void) | null = null
+    private didNavigateInPageListener: ((e: any) => void) | null = null
 
     constructor(leaf: WorkspaceLeaf, options: GateFrameOption, plugin: OpenGatePlugin) {
         super(leaf)
@@ -66,7 +71,7 @@ export class GateView extends ItemView {
     }
 
     isWebviewFrame(): boolean {
-        return this.frame! instanceof HTMLIFrameElement
+        return this.frame instanceof HTMLIFrameElement
     }
 
     onload(): void {
@@ -884,123 +889,33 @@ ${sourceRefs}
     }
 
     /**
-     * 멀티 소스 AI API 호출
+     * 멀티 소스 AI API 호출 (AIService 위임)
      */
     private async callMultiSourceAI(
         provider: string,
-        apiKey: string,
+        _apiKey: string,
         systemPrompt: string,
         userPrompt: string
     ): Promise<string> {
-        const endpoints: Record<string, string> = {
-            'gemini': 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
-            'grok': 'https://api.x.ai/v1/chat/completions',
-            'claude': 'https://api.anthropic.com/v1/messages',
-            'openai': 'https://api.openai.com/v1/chat/completions',
-            'glm': 'https://open.bigmodel.cn/api/paas/v4/chat/completions'
+        const aiService = getAIService()
+        if (!aiService) {
+            throw new Error('AI 서비스가 초기화되지 않았습니다.')
         }
 
-        const endpoint = endpoints[provider]
-        if (!endpoint) {
-            throw new Error(`지원하지 않는 AI 제공자: ${provider}`)
+        const response = await aiService.generateTextWithProvider(
+            provider as import('./ai/types').AIProviderType,
+            [
+                { role: 'system', content: systemPrompt },
+                { role: 'user', content: userPrompt }
+            ],
+            { temperature: 0.7, maxTokens: 8192 }
+        )
+
+        if (!response.success || !response.content) {
+            throw new Error(response.error || 'AI 응답을 받지 못했습니다.')
         }
 
-        // 기본 설정값
-        const temperature = 0.7
-        const maxTokens = 8192
-
-        let response: Response
-        let result: string
-
-        switch (provider) {
-            case 'gemini':
-                response = await fetch(`${endpoint}?key=${apiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
-                        generationConfig: {
-                            temperature: temperature,
-                            maxOutputTokens: maxTokens
-                        }
-                    })
-                })
-                const geminiData = await response.json()
-                result = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || ''
-                break
-
-            case 'grok':
-            case 'openai':
-                response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`
-                    },
-                    body: JSON.stringify({
-                        model: provider === 'grok' ? 'grok-3-latest' : 'gpt-4o-mini',
-                        messages: [
-                            { role: 'system', content: systemPrompt },
-                            { role: 'user', content: userPrompt }
-                        ],
-                        temperature: temperature,
-                        max_tokens: maxTokens
-                    })
-                })
-                const openaiData = await response.json()
-                result = openaiData.choices?.[0]?.message?.content || ''
-                break
-
-            case 'claude':
-                response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-api-key': apiKey,
-                        'anthropic-version': '2023-06-01',
-                        'anthropic-dangerous-direct-browser-access': 'true'
-                    },
-                    body: JSON.stringify({
-                        model: 'claude-sonnet-4-20250514',
-                        max_tokens: maxTokens,
-                        system: systemPrompt,
-                        messages: [{ role: 'user', content: userPrompt }]
-                    })
-                })
-                const claudeData = await response.json()
-                result = claudeData.content?.[0]?.text || ''
-                break
-
-            case 'glm':
-                response = await fetch(endpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`
-                    },
-                    body: JSON.stringify({
-                        model: 'glm-4-flash',
-                        messages: [
-                            { role: 'system', content: systemPrompt },
-                            { role: 'user', content: userPrompt }
-                        ],
-                        temperature: temperature,
-                        max_tokens: maxTokens
-                    })
-                })
-                const glmData = await response.json()
-                result = glmData.choices?.[0]?.message?.content || ''
-                break
-
-            default:
-                throw new Error(`지원하지 않는 AI 제공자: ${provider}`)
-        }
-
-        if (!result) {
-            throw new Error('AI 응답을 받지 못했습니다.')
-        }
-
-        return result
+        return response.content
     }
 
     /**
@@ -1038,36 +953,42 @@ ${sourceRefs}
 
         // 1. Tab Bar (Gate Switcher)
         const tabBar = this.topBarEl.createDiv({ cls: 'gate-tab-bar' });
+        tabBar.setAttribute('role', 'tablist');
+        tabBar.setAttribute('aria-label', 'Gate tabs');
         this.renderTabBar(tabBar);
 
         // 2. Control Row (Address + Actions)
         const controlRow = this.topBarEl.createDiv({ cls: 'gate-control-row' });
 
         // Navigation Buttons
-        new ButtonComponent(controlRow)
+        const backBtn = new ButtonComponent(controlRow)
             .setIcon('arrow-left')
             .setTooltip('Back')
             .onClick(() => {
-                if (!this.useIframe && (this.frame as WebviewTag).canGoBack()) {
-                    (this.frame as WebviewTag).goBack();
+                if (!this.useIframe) {
+                    const webview = this.frame as WebviewTag
+                    if (webview.canGoBack()) webview.goBack()
                 }
             });
+        backBtn.buttonEl.setAttribute('aria-label', 'Navigate back');
 
-        new ButtonComponent(controlRow)
+        const fwdBtn = new ButtonComponent(controlRow)
             .setIcon('arrow-right')
             .setTooltip('Forward')
             .onClick(() => {
-                if (!this.useIframe && (this.frame as WebviewTag).canGoForward()) {
-                    (this.frame as WebviewTag).goForward();
+                if (!this.useIframe) {
+                    const webview = this.frame as WebviewTag
+                    if (webview.canGoForward()) webview.goForward()
                 }
             });
+        fwdBtn.buttonEl.setAttribute('aria-label', 'Navigate forward');
 
         // Address Bar
         const addressInput = new TextComponent(controlRow);
         addressInput.setPlaceholder('https://...');
         addressInput.inputEl.addClass('gate-address-input');
         addressInput.setValue(this.options.url);
-        addressInput.inputEl.addEventListener('keydown', async (e) => {
+        this.registerDomEvent(addressInput.inputEl, 'keydown', async (e) => {
             if (e.key === 'Enter') {
                 const url = addressInput.getValue();
                 if (url) {
@@ -1079,12 +1000,14 @@ ${sourceRefs}
         // Current URL Listener to update address bar
         this.onFrameReady(() => {
             if (!this.useIframe) {
-                (this.frame as WebviewTag).addEventListener('did-navigate', (e) => {
+                this.didNavigateListener = (e: any) => {
                     addressInput.setValue(e.url);
-                });
-                (this.frame as WebviewTag).addEventListener('did-navigate-in-page', (e) => {
+                };
+                this.didNavigateInPageListener = (e: any) => {
                     addressInput.setValue(e.url);
-                });
+                };
+                (this.frame as WebviewTag).addEventListener('did-navigate', this.didNavigateListener);
+                (this.frame as WebviewTag).addEventListener('did-navigate-in-page', this.didNavigateInPageListener);
             }
         });
 
@@ -1141,9 +1064,16 @@ ${sourceRefs}
 
         for (const id in gates) {
             const gate = gates[id];
+            const isActive = gate.id === this.currentGateState.id;
             const tab = container.createDiv({ cls: 'gate-tab' });
-            // currentGateState를 사용하여 활성 탭 표시 (readonly options 수정 방지)
-            if (gate.id === this.currentGateState.id) tab.addClass('active');
+
+            // ARIA: tab role and state
+            tab.setAttribute('role', 'tab');
+            tab.setAttribute('aria-selected', String(isActive));
+            tab.setAttribute('aria-label', gate.title);
+            tab.tabIndex = isActive ? 0 : -1;
+
+            if (isActive) tab.addClass('active');
 
             // Icon
             const iconContainer = tab.createSpan({ cls: 'gate-tab-icon' });
@@ -1155,6 +1085,9 @@ ${sourceRefs}
             // Close button (X) - 각 탭에 삭제 버튼 추가
             const closeBtn = tab.createSpan({ cls: 'gate-tab-close' });
             setIcon(closeBtn, 'x');
+            closeBtn.setAttribute('role', 'button');
+            closeBtn.setAttribute('aria-label', `Close ${gate.title}`);
+            closeBtn.tabIndex = 0;
             closeBtn.addEventListener('click', async (e) => {
                 e.stopPropagation(); // 탭 클릭 이벤트 전파 방지
                 const confirmDelete = confirm(`"${gate.title}" 게이트를 삭제하시겠습니까?`);
@@ -1162,6 +1095,12 @@ ${sourceRefs}
                     await this.plugin.removeGate(gate.id);
                     this.renderTabBar(container);
                     new Notice(`"${gate.title}" 게이트가 삭제되었습니다.`);
+                }
+            });
+            closeBtn.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    closeBtn.click();
                 }
             });
 
@@ -1407,6 +1346,7 @@ ${formattedText}
             if (!this.isFrameReady) {
                 this.isFrameReady = true
                 this.frameReadyCallbacks.forEach((callback) => callback())
+                this.frameReadyCallbacks = [] // Release closure references
             }
         }
 
@@ -1416,9 +1356,8 @@ ${formattedText}
             this.frame = createWebviewTag(this.options, onReady, this.frameDoc)
 
             // Popup Handling - OAuth URL은 같은 webview에서, 일반 URL은 모달로 처리
-            this.frame.addEventListener('new-window', (e) => {
-                // @ts-ignore
-                const url = e.url as string;
+            this.newWindowListener = (e: Event) => {
+                const url = (e as any).url as string;
                 if (!url) return;
 
                 // OAuth 제공자 URL 감지 (Google, Apple, Microsoft, etc.)
@@ -1445,10 +1384,10 @@ ${formattedText}
 
                 // 일반 팝업은 Obsidian 모달로 처리
                 new GatePopupModal(this.plugin.app, url, this.options.profileKey).open();
-            });
+            };
+            this.frame.addEventListener('new-window', this.newWindowListener);
 
-            this.frame.addEventListener('destroyed', () => {
-
+            this.destroyedListener = () => {
                 if (this.frameDoc != this.contentEl.doc) {
                     if (this.frame) {
                         this.frame.remove()
@@ -1456,16 +1395,42 @@ ${formattedText}
                     this.frameDoc = this.contentEl.doc
                     this.createFrame()
                 }
-            })
+            };
+            this.frame.addEventListener('destroyed', this.destroyedListener)
         }
 
         this.contentEl.appendChild(this.frame as unknown as HTMLElement)
     }
 
     onunload(): void {
+        // Remove WebviewTag event listeners
+        if (this.frame && !(this.frame instanceof HTMLIFrameElement)) {
+            const webview = this.frame as WebviewTag
+            if (this.newWindowListener) {
+                webview.removeEventListener('new-window', this.newWindowListener)
+                this.newWindowListener = null
+            }
+            if (this.destroyedListener) {
+                webview.removeEventListener('destroyed', this.destroyedListener)
+                this.destroyedListener = null
+            }
+            if (this.didNavigateListener) {
+                webview.removeEventListener('did-navigate', this.didNavigateListener)
+                this.didNavigateListener = null
+            }
+            if (this.didNavigateInPageListener) {
+                webview.removeEventListener('did-navigate-in-page', this.didNavigateInPageListener)
+                this.didNavigateInPageListener = null
+            }
+        }
         if (this.frame) {
             this.frame.remove()
         }
+        // Clean up references
+        this.clipDropdown = null
+        this.aiDropdown = null
+        this.frameReadyCallbacks = []
+        this.clipService = null
         super.onunload()
     }
 
