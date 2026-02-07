@@ -136,11 +136,7 @@ export class ClipService {
     /**
      * 기존 노트에 클리핑 추가
      */
-    async clipToNote(
-        webview: Electron.WebviewTag,
-        gateId: string,
-        targetFile: TFile
-    ): Promise<ClipResult> {
+    async clipToNote(webview: Electron.WebviewTag, gateId: string, targetFile: TFile): Promise<ClipResult> {
         try {
             // 콘텐츠 추출
             const content = await ContentExtractor.extractPageContent(webview)
@@ -190,10 +186,7 @@ export class ClipService {
     /**
      * 선택 텍스트만 추출
      */
-    async extractSelectionOnly(
-        webview: Electron.WebviewTag,
-        gateId: string
-    ): Promise<ClipData | null> {
+    async extractSelectionOnly(webview: Electron.WebviewTag, gateId: string): Promise<ClipData | null> {
         try {
             const selection = await ContentExtractor.extractSelection(webview)
             if (!selection || !selection.hasSelection) return null
@@ -226,11 +219,7 @@ export class ClipService {
     /**
      * ClipData 생성 헬퍼
      */
-    private createClipData(
-        content: ExtractedContent,
-        metadata: PageMetadata | null,
-        gateId: string
-    ): ClipData {
+    private createClipData(content: ExtractedContent, metadata: PageMetadata | null, gateId: string): ClipData {
         return {
             id: generateClipId(),
             url: metadata?.url || '',

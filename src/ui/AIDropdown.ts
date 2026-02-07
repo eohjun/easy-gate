@@ -20,7 +20,7 @@ export interface AIDropdownOptions {
     onAIWithPrompt: (prompt: string) => void
     onAISelection: () => void
     onOpenAnalysisModal: (templateId?: string) => void
-    onOpenMultiSourceModal: () => void  // 멀티 소스 분석 모달
+    onOpenMultiSourceModal: () => void // 멀티 소스 분석 모달
     onOpenSettings: () => void
 }
 
@@ -62,13 +62,7 @@ export class AIDropdown {
         const currentProvider = AI_PROVIDERS[this.settings.provider]
         const hasApiKey = this.hasApiKey(this.settings.provider)
 
-        menu.addItem((item) =>
-            item
-                .setTitle(
-                    `🤖 ${currentProvider.displayName} ${hasApiKey ? '✅' : '⚠️ 키 필요'}`
-                )
-                .setDisabled(true)
-        )
+        menu.addItem((item) => item.setTitle(`🤖 ${currentProvider.displayName} ${hasApiKey ? '✅' : '⚠️ 키 필요'}`).setDisabled(true))
 
         menu.addSeparator()
 
@@ -155,16 +149,14 @@ export class AIDropdown {
         // Provider 선택 서브메뉴
         menu.addItem((item) => item.setTitle('Provider 선택').setDisabled(true))
 
-        const providers = Object.values(AI_PROVIDERS) as typeof AI_PROVIDERS[AIProviderType][]
+        const providers = Object.values(AI_PROVIDERS) as (typeof AI_PROVIDERS)[AIProviderType][]
         providers.forEach((provider) => {
             const isConfigured = this.hasApiKey(provider.id)
             const isSelected = this.settings.provider === provider.id
 
             menu.addItem((item) =>
                 item
-                    .setTitle(
-                        `  ${isSelected ? '● ' : '○ '}${provider.displayName} ${isConfigured ? '✅' : ''}`
-                    )
+                    .setTitle(`  ${isSelected ? '● ' : '○ '}${provider.displayName} ${isConfigured ? '✅' : ''}`)
                     .setDisabled(!isConfigured)
                     .onClick(() => {
                         if (isConfigured) {
@@ -225,12 +217,7 @@ export class AIDropdown {
  * AIButton 생성 헬퍼
  * Gate Top Bar에 추가할 AI 버튼을 생성합니다.
  */
-export function createAIButton(
-    container: HTMLElement,
-    dropdown: AIDropdown,
-    onOpenAnalysisModal: () => void,
-    hasApiKey: boolean
-): HTMLElement {
+export function createAIButton(container: HTMLElement, dropdown: AIDropdown, onOpenAnalysisModal: () => void, hasApiKey: boolean): HTMLElement {
     const wrapper = container.createDiv({ cls: 'easy-gate-ai-btn-wrapper' })
 
     // 메인 AI 버튼 (클릭시 분석 모달 열기)
@@ -263,18 +250,12 @@ export function createAIButton(
 /**
  * 간단한 AI 상태 인디케이터
  */
-export function createAIStatusIndicator(
-    container: HTMLElement,
-    provider: AIProviderType,
-    hasApiKey: boolean
-): HTMLElement {
+export function createAIStatusIndicator(container: HTMLElement, provider: AIProviderType, hasApiKey: boolean): HTMLElement {
     const indicator = container.createSpan({ cls: 'easy-gate-ai-status' })
     const providerInfo = AI_PROVIDERS[provider]
 
     indicator.textContent = `${hasApiKey ? '🟢' : '🔴'} ${providerInfo.displayName}`
-    indicator.title = hasApiKey
-        ? `${providerInfo.displayName} 연결됨`
-        : `${providerInfo.displayName} API 키 필요`
+    indicator.title = hasApiKey ? `${providerInfo.displayName} 연결됨` : `${providerInfo.displayName} API 키 필요`
     indicator.style.cssText = `
         font-size: 11px;
         padding: 2px 6px;

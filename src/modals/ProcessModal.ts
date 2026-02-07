@@ -120,7 +120,7 @@ export class ProcessModal extends Modal {
         providerInfo.createSpan({ text: `🔧 ${provider.displayName}` })
         providerInfo.createSpan({ text: '|' })
 
-        const template = AnalysisModal.getTemplates().find(t => t.id === this.config.templateId)
+        const template = AnalysisModal.getTemplates().find((t) => t.id === this.config.templateId)
         const templateName = template?.name || '커스텀 프롬프트'
         providerInfo.createSpan({ text: `📋 ${templateName}` })
     }
@@ -263,12 +263,7 @@ export class ProcessModal extends Modal {
         this.resultEl.empty()
 
         // 마크다운 렌더링
-        await MarkdownRenderer.renderMarkdown(
-            content,
-            this.resultEl,
-            '',
-            this.renderComponent
-        )
+        await MarkdownRenderer.renderMarkdown(content, this.resultEl, '', this.renderComponent)
     }
 
     /**
@@ -431,11 +426,7 @@ export class ProcessModal extends Modal {
             // AI 호출
             this.updateProgress(50)
 
-            const response = await aiService.generateTextWithProvider(
-                this.config.provider,
-                [{ role: 'user', content: prompt }],
-                { temperature: 0.7, maxTokens: 4000 }
-            )
+            const response = await aiService.generateTextWithProvider(this.config.provider, [{ role: 'user', content: prompt }], { temperature: 0.7, maxTokens: 4000 })
 
             const fullContent = response.content
             this.resultContent = fullContent
@@ -448,7 +439,6 @@ export class ProcessModal extends Modal {
             this.updateStatus()
             this.updateProgress(100)
             this.updateActionsForCompletion()
-
         } catch (error) {
             this.endTime = Date.now()
             this.state = 'error'

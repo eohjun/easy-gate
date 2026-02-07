@@ -6,17 +6,7 @@
  */
 
 import { App, Modal, Setting, TextAreaComponent, TFile, FuzzySuggestModal } from 'obsidian'
-import {
-    AISettings,
-    AIProviderType,
-    AI_PROVIDERS,
-    SourceItem,
-    SourceType,
-    SourceMetadata,
-    MultiSourceAnalysisType,
-    MultiSourceAnalysisRequest,
-    ClipData
-} from '../ai/types'
+import { AISettings, AIProviderType, AI_PROVIDERS, SourceItem, SourceType, SourceMetadata, MultiSourceAnalysisType, MultiSourceAnalysisRequest, ClipData } from '../ai/types'
 import { getAIService } from '../ai/AIService'
 import { showSuccess, showError, showWarning } from '../ui/ToastNotification'
 
@@ -109,9 +99,9 @@ class TextInputModal extends Modal {
         new Setting(contentEl)
             .setName('제목')
             .setDesc('이 텍스트의 제목을 입력하세요')
-            .addText(text => {
+            .addText((text) => {
                 text.setPlaceholder('예: 회의록 요약')
-                text.onChange(value => {
+                text.onChange((value) => {
                     this.titleInput = value
                 })
             })
@@ -439,14 +429,14 @@ export class MultiSourceAnalysisModal extends Modal {
         new Setting(section)
             .setName('분석 유형')
             .setDesc('소스들을 어떻게 분석할지 선택하세요')
-            .addDropdown(dropdown => {
+            .addDropdown((dropdown) => {
                 dropdown
                     .addOption('synthesis', '🔄 종합 분석 - 모든 소스를 통합하여 요약')
                     .addOption('comparison', '⚖️ 비교 분석 - 소스 간 차이점/공통점 분석')
                     .addOption('summary', '📝 개별 요약 - 각 소스를 요약 후 종합')
                     .addOption('custom', '✏️ 커스텀 - 프롬프트만 사용')
                     .setValue(this.analysisType)
-                    .onChange(value => {
+                    .onChange((value) => {
                         this.analysisType = value as MultiSourceAnalysisType
                     })
             })
@@ -460,16 +450,13 @@ export class MultiSourceAnalysisModal extends Modal {
         new Setting(section)
             .setName('AI 제공자')
             .setDesc('분석에 사용할 AI를 선택하세요')
-            .addDropdown(dropdown => {
-                Object.values(AI_PROVIDERS).forEach(provider => {
+            .addDropdown((dropdown) => {
+                Object.values(AI_PROVIDERS).forEach((provider) => {
                     const configured = hasApiKey(provider.id)
-                    dropdown.addOption(
-                        provider.id,
-                        `${provider.displayName} ${configured ? '✅' : '⚠️'}`
-                    )
+                    dropdown.addOption(provider.id, `${provider.displayName} ${configured ? '✅' : '⚠️'}`)
                 })
                 dropdown.setValue(this.selectedProvider)
-                dropdown.onChange(value => {
+                dropdown.onChange((value) => {
                     this.selectedProvider = value as AIProviderType
                 })
             })
@@ -490,27 +477,25 @@ export class MultiSourceAnalysisModal extends Modal {
         `
         guide.textContent = 'AI에게 특별한 분석 방향이나 요청사항을 입력하세요. 비워두면 기본 분석이 수행됩니다.'
 
-        new Setting(section)
-            .setClass('prompt-textarea-setting')
-            .addTextArea(text => {
-                this.promptTextArea = text
-                text.setPlaceholder(
-                    '예시:\n' +
-                        '- 이 자료들에서 AI 교육의 핵심 트렌드를 정리해줘\n' +
-                        '- 각 소스의 주장을 비교하고 공통점과 차이점을 분석해줘\n' +
-                        '- 실제 교육 현장에 적용할 수 있는 인사이트를 추출해줘'
-                )
-                text.inputEl.style.cssText = `
+        new Setting(section).setClass('prompt-textarea-setting').addTextArea((text) => {
+            this.promptTextArea = text
+            text.setPlaceholder(
+                '예시:\n' +
+                    '- 이 자료들에서 AI 교육의 핵심 트렌드를 정리해줘\n' +
+                    '- 각 소스의 주장을 비교하고 공통점과 차이점을 분석해줘\n' +
+                    '- 실제 교육 현장에 적용할 수 있는 인사이트를 추출해줘'
+            )
+            text.inputEl.style.cssText = `
                     width: 100%;
                     min-height: 100px;
                     resize: vertical;
                     font-size: 13px;
                     line-height: 1.5;
                 `
-                text.onChange(value => {
-                    this.customPrompt = value
-                })
+            text.onChange((value) => {
+                this.customPrompt = value
             })
+        })
     }
 
     private renderFooter(): void {
@@ -571,7 +556,7 @@ export class MultiSourceAnalysisModal extends Modal {
                 author: clipData.metadata.author,
                 publishedDate: clipData.metadata.date,
                 charCount: clipData.content.length,
-                wordCount: clipData.content.split(/\s+/).filter(w => w).length
+                wordCount: clipData.content.split(/\s+/).filter((w) => w).length
             },
             addedAt: new Date().toISOString()
         }
@@ -590,9 +575,9 @@ export class MultiSourceAnalysisModal extends Modal {
                 content: content,
                 metadata: {
                     filePath: file.path,
-                    tags: cache?.tags?.map(t => t.tag) || [],
+                    tags: cache?.tags?.map((t) => t.tag) || [],
                     charCount: content.length,
-                    wordCount: content.split(/\s+/).filter(w => w).length
+                    wordCount: content.split(/\s+/).filter((w) => w).length
                 },
                 addedAt: new Date().toISOString()
             }
@@ -614,7 +599,7 @@ export class MultiSourceAnalysisModal extends Modal {
             content: content,
             metadata: {
                 charCount: content.length,
-                wordCount: content.split(/\s+/).filter(w => w).length
+                wordCount: content.split(/\s+/).filter((w) => w).length
             },
             addedAt: new Date().toISOString()
         }
@@ -697,9 +682,7 @@ export class MultiSourceAnalysisModal extends Modal {
         // AI 서비스 확인
         const aiService = getAIService()
         if (!aiService?.isProviderConfigured(this.selectedProvider)) {
-            showWarning(
-                `${AI_PROVIDERS[this.selectedProvider].displayName} API 키가 설정되지 않았습니다.`
-            )
+            showWarning(`${AI_PROVIDERS[this.selectedProvider].displayName} API 키가 설정되지 않았습니다.`)
             return
         }
 

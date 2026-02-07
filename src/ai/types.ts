@@ -208,21 +208,12 @@ export interface AIProvider {
     /**
      * 단일 텍스트 생성
      */
-    generateText(
-        messages: AIMessage[],
-        apiKey: string,
-        options?: AIRequestOptions
-    ): Promise<AIProviderResponse>
+    generateText(messages: AIMessage[], apiKey: string, options?: AIRequestOptions): Promise<AIProviderResponse>
 
     /**
      * 스트리밍 텍스트 생성 (선택적)
      */
-    generateTextStream?(
-        messages: AIMessage[],
-        apiKey: string,
-        onChunk: (chunk: string) => void,
-        options?: AIRequestOptions
-    ): Promise<AIProviderResponse>
+    generateTextStream?(messages: AIMessage[], apiKey: string, onChunk: (chunk: string) => void, options?: AIRequestOptions): Promise<AIProviderResponse>
 }
 
 export interface AIProviderResponse {

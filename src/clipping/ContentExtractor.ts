@@ -159,9 +159,7 @@ export class ContentExtractor {
     /**
      * 전체 페이지 콘텐츠 추출
      */
-    static async extractPageContent(
-        webview: Electron.WebviewTag
-    ): Promise<ExtractedContent | null> {
+    static async extractPageContent(webview: Electron.WebviewTag): Promise<ExtractedContent | null> {
         try {
             const result = await webview.executeJavaScript(CONTENT_EXTRACTION_SCRIPT)
             return result as ExtractedContent
@@ -174,9 +172,7 @@ export class ContentExtractor {
     /**
      * 선택된 텍스트 추출
      */
-    static async extractSelection(
-        webview: Electron.WebviewTag
-    ): Promise<{ text: string; html: string; length: number; hasSelection: boolean } | null> {
+    static async extractSelection(webview: Electron.WebviewTag): Promise<{ text: string; html: string; length: number; hasSelection: boolean } | null> {
         try {
             const result = await webview.executeJavaScript(SELECTION_EXTRACTION_SCRIPT)
             return result

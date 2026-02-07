@@ -5,16 +5,7 @@
  * 사용자는 Provider만 선택하면 되고, API 키는 설정에서 한 번만 저장합니다.
  */
 
-import {
-    AIProvider,
-    AIProviderType,
-    AIProviderResponse,
-    AIMessage,
-    AIRequestOptions,
-    AISettings,
-    AI_PROVIDERS,
-    AIProviderConfig
-} from './types'
+import { AIProvider, AIProviderType, AIProviderResponse, AIMessage, AIRequestOptions, AISettings, AI_PROVIDERS, AIProviderConfig } from './types'
 
 import { GeminiProvider } from './providers/GeminiProvider'
 import { GrokProvider } from './providers/GrokProvider'
@@ -118,10 +109,7 @@ export class AIService {
     /**
      * 텍스트 생성 (현재 선택된 프로바이더 사용)
      */
-    async generateText(
-        messages: AIMessage[],
-        options?: AIRequestOptions
-    ): Promise<AIProviderResponse> {
+    async generateText(messages: AIMessage[], options?: AIRequestOptions): Promise<AIProviderResponse> {
         const provider = this.getCurrentProvider()
         if (!provider) {
             return {
@@ -161,11 +149,7 @@ export class AIService {
     /**
      * 특정 프로바이더로 텍스트 생성
      */
-    async generateTextWithProvider(
-        providerId: AIProviderType,
-        messages: AIMessage[],
-        options?: AIRequestOptions
-    ): Promise<AIProviderResponse> {
+    async generateTextWithProvider(providerId: AIProviderType, messages: AIMessage[], options?: AIRequestOptions): Promise<AIProviderResponse> {
         const provider = this.providers.get(providerId)
         if (!provider) {
             return {
@@ -204,11 +188,7 @@ export class AIService {
     /**
      * 간단한 프롬프트로 텍스트 생성 (헬퍼 메서드)
      */
-    async simpleGenerate(
-        userPrompt: string,
-        systemPrompt?: string,
-        options?: AIRequestOptions
-    ): Promise<AIProviderResponse> {
+    async simpleGenerate(userPrompt: string, systemPrompt?: string, options?: AIRequestOptions): Promise<AIProviderResponse> {
         const messages: AIMessage[] = []
 
         if (systemPrompt) {
@@ -222,11 +202,7 @@ export class AIService {
     /**
      * 웹 콘텐츠 요약용 헬퍼 메서드
      */
-    async summarizeContent(
-        content: string,
-        language: string = '한국어',
-        options?: AIRequestOptions
-    ): Promise<AIProviderResponse> {
+    async summarizeContent(content: string, language: string = '한국어', options?: AIRequestOptions): Promise<AIProviderResponse> {
         const systemPrompt = `You are a helpful assistant that summarizes web content.
 Always respond in ${language}.
 Provide clear, concise summaries that capture the key points.`
@@ -262,9 +238,7 @@ Provide clear, concise summaries that capture the key points.`
      * 모든 프로바이더 상태 정보 반환
      */
     getAllProviderStatus(): ReturnType<typeof this.getProviderStatus>[] {
-        return (Object.keys(AI_PROVIDERS) as AIProviderType[]).map((id) =>
-            this.getProviderStatus(id)
-        )
+        return (Object.keys(AI_PROVIDERS) as AIProviderType[]).map((id) => this.getProviderStatus(id))
     }
 }
 

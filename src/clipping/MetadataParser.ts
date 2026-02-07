@@ -210,17 +210,7 @@ export class MetadataParser {
         try {
             const urlObj = new URL(url)
             // 트래킹 파라미터 제거
-            const removeParams = [
-                'utm_source',
-                'utm_medium',
-                'utm_campaign',
-                'utm_content',
-                'utm_term',
-                'ref',
-                'source',
-                'fbclid',
-                'gclid'
-            ]
+            const removeParams = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'ref', 'source', 'fbclid', 'gclid']
             removeParams.forEach((param) => urlObj.searchParams.delete(param))
             return urlObj.toString()
         } catch {

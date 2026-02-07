@@ -1,12 +1,5 @@
 import { GateFrameOption } from './GateOptions'
-import {
-    AIProviderType,
-    AISettings,
-    ClippingSettings,
-    SavedPrompt,
-    DEFAULT_AI_SETTINGS,
-    DEFAULT_CLIPPING_SETTINGS
-} from './ai/types'
+import { AIProviderType, AISettings, ClippingSettings, SavedPrompt, DEFAULT_AI_SETTINGS, DEFAULT_CLIPPING_SETTINGS } from './ai/types'
 
 export interface PluginSetting {
     uuid: string

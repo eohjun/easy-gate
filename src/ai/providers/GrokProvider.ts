@@ -7,12 +7,7 @@
  */
 
 import { BaseProvider } from './BaseProvider'
-import {
-    AIProviderType,
-    AIProviderResponse,
-    AIMessage,
-    AIRequestOptions
-} from '../types'
+import { AIProviderType, AIProviderResponse, AIMessage, AIRequestOptions } from '../types'
 
 interface GrokMessage {
     role: 'system' | 'user' | 'assistant'
@@ -67,7 +62,7 @@ export class GrokProvider extends BaseProvider {
                 url,
                 method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${apiKey}`,
+                    Authorization: `Bearer ${apiKey}`,
                     'Content-Type': 'application/json'
                 }
             })
@@ -82,11 +77,7 @@ export class GrokProvider extends BaseProvider {
     /**
      * 텍스트 생성
      */
-    async generateText(
-        messages: AIMessage[],
-        apiKey: string,
-        options?: AIRequestOptions
-    ): Promise<AIProviderResponse> {
+    async generateText(messages: AIMessage[], apiKey: string, options?: AIRequestOptions): Promise<AIProviderResponse> {
         const model = options?.model || this.config.defaultModel
         const url = `${this.config.endpoint}/chat/completions`
 
@@ -106,7 +97,7 @@ export class GrokProvider extends BaseProvider {
                 url,
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${apiKey}`,
+                    Authorization: `Bearer ${apiKey}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(requestBody)

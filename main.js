@@ -463,17 +463,7 @@ var init_MetadataParser = __esm({
       static normalizeUrl(url) {
         try {
           const urlObj = new URL(url);
-          const removeParams = [
-            "utm_source",
-            "utm_medium",
-            "utm_campaign",
-            "utm_content",
-            "utm_term",
-            "ref",
-            "source",
-            "fbclid",
-            "gclid"
-          ];
+          const removeParams = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term", "ref", "source", "fbclid", "gclid"];
           removeParams.forEach((param) => urlObj.searchParams.delete(param));
           return urlObj.toString();
         } catch (e) {
@@ -1141,12 +1131,7 @@ var BaseProvider = class {
    */
   async makeRequest(_url, options, timeoutMs = 15e3) {
     try {
-      const response = await Promise.race([
-        (0, import_obsidian3.requestUrl)(options),
-        new Promise(
-          (_, reject) => setTimeout(() => reject(new Error("Request timed out")), timeoutMs)
-        )
-      ]);
+      const response = await Promise.race([(0, import_obsidian3.requestUrl)(options), new Promise((_, reject) => setTimeout(() => reject(new Error("Request timed out")), timeoutMs))]);
       return response.json;
     } catch (error) {
       if (error instanceof Error) {
@@ -1329,7 +1314,7 @@ var GrokProvider = class extends BaseProvider {
         url,
         method: "GET",
         headers: {
-          "Authorization": `Bearer ${apiKey}`,
+          Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json"
         }
       });
@@ -1361,7 +1346,7 @@ var GrokProvider = class extends BaseProvider {
         url,
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${apiKey}`,
+          Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify(requestBody)
@@ -1517,7 +1502,7 @@ var OpenAIProvider = class extends BaseProvider {
         url,
         method: "GET",
         headers: {
-          "Authorization": `Bearer ${apiKey}`,
+          Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json"
         }
       });
@@ -1549,7 +1534,7 @@ var OpenAIProvider = class extends BaseProvider {
         url,
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${apiKey}`,
+          Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify(requestBody)
@@ -1600,17 +1585,21 @@ var GLMProvider = class extends BaseProvider {
     if (!id || !secret) {
       return apiKey;
     }
-    const header = this.base64UrlEncode(JSON.stringify({
-      alg: "HS256",
-      sign_type: "SIGN"
-    }));
+    const header = this.base64UrlEncode(
+      JSON.stringify({
+        alg: "HS256",
+        sign_type: "SIGN"
+      })
+    );
     const now = Math.floor(Date.now() / 1e3);
-    const payload = this.base64UrlEncode(JSON.stringify({
-      api_key: id,
-      exp: now + 3600,
-      // 1시간 유효
-      timestamp: now * 1e3
-    }));
+    const payload = this.base64UrlEncode(
+      JSON.stringify({
+        api_key: id,
+        exp: now + 3600,
+        // 1시간 유효
+        timestamp: now * 1e3
+      })
+    );
     const signature = this.base64UrlEncode(secret);
     return `${header}.${payload}.${signature}`;
   }
@@ -1629,7 +1618,7 @@ var GLMProvider = class extends BaseProvider {
         url,
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
@@ -1667,7 +1656,7 @@ var GLMProvider = class extends BaseProvider {
         url,
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify(requestBody)
@@ -1889,9 +1878,7 @@ ${content}`;
    * 모든 프로바이더 상태 정보 반환
    */
   getAllProviderStatus() {
-    return Object.keys(AI_PROVIDERS).map(
-      (id) => this.getProviderStatus(id)
-    );
+    return Object.keys(AI_PROVIDERS).map((id) => this.getProviderStatus(id));
   }
 };
 var aiServiceInstance = null;
@@ -2070,10 +2057,7 @@ var SettingTab = class extends import_obsidian4.PluginSettingTab {
       });
       settingEl.addExtraButton((button) => {
         button.setIcon("pencil").setTooltip("\uBAA8\uB378 \uBCC0\uACBD").onClick(async () => {
-          const newModel = prompt(
-            `${providerConfig.displayName} \uBAA8\uB378\uBA85\uC744 \uC785\uB825\uD558\uC138\uC694:`,
-            currentModel
-          );
+          const newModel = prompt(`${providerConfig.displayName} \uBAA8\uB378\uBA85\uC744 \uC785\uB825\uD558\uC138\uC694:`, currentModel);
           if (newModel && newModel.trim().length > 0) {
             this.plugin.settings.ai.models[providerId] = newModel.trim();
             await this.plugin.saveSettings();
@@ -2564,9 +2548,7 @@ var ClipDropdown = class {
    */
   show(event) {
     const menu = new import_obsidian8.Menu();
-    menu.addItem(
-      (item) => item.setTitle("\u{1F4E5} \uC6F9\uD398\uC774\uC9C0 \uC800\uC7A5 \uC635\uC158").setDisabled(true)
-    );
+    menu.addItem((item) => item.setTitle("\u{1F4E5} \uC6F9\uD398\uC774\uC9C0 \uC800\uC7A5 \uC635\uC158").setDisabled(true));
     menu.addSeparator();
     menu.addItem(
       (item) => item.setTitle("\u{1F4C4} \uC804\uCCB4 \uD398\uC774\uC9C0 \uC800\uC7A5").setIcon("file-plus").onClick(() => {
@@ -2587,9 +2569,7 @@ var ClipDropdown = class {
     const recentNotes = this.getRecentClippingNotes();
     if (recentNotes.length > 0) {
       menu.addSeparator();
-      menu.addItem(
-        (item) => item.setTitle("\uCD5C\uADFC \uD074\uB9AC\uD551").setDisabled(true)
-      );
+      menu.addItem((item) => item.setTitle("\uCD5C\uADFC \uD074\uB9AC\uD551").setDisabled(true));
       recentNotes.forEach((file) => {
         menu.addItem(
           (item) => item.setTitle(`  \u2192 ${file.basename}`).setIcon("file").onClick(() => {
@@ -2627,14 +2607,10 @@ var ClipDropdown = class {
         );
       });
       if (files.length > 15) {
-        menu.addItem(
-          (item) => item.setTitle(`... ${files.length - 15}\uAC1C \uB354`).setDisabled(true)
-        );
+        menu.addItem((item) => item.setTitle(`... ${files.length - 15}\uAC1C \uB354`).setDisabled(true));
       }
     } else {
-      menu.addItem(
-        (item) => item.setTitle("\uD074\uB9AC\uD551 \uD3F4\uB354\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4").setDisabled(true)
-      );
+      menu.addItem((item) => item.setTitle("\uD074\uB9AC\uD551 \uD3F4\uB354\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4").setDisabled(true));
     }
     menu.showAtMouseEvent(new MouseEvent("click"));
   }
@@ -2712,11 +2688,7 @@ var AIDropdown = class {
     const menu = new import_obsidian9.Menu();
     const currentProvider = AI_PROVIDERS[this.settings.provider];
     const hasApiKey = this.hasApiKey(this.settings.provider);
-    menu.addItem(
-      (item) => item.setTitle(
-        `\u{1F916} ${currentProvider.displayName} ${hasApiKey ? "\u2705" : "\u26A0\uFE0F \uD0A4 \uD544\uC694"}`
-      ).setDisabled(true)
-    );
+    menu.addItem((item) => item.setTitle(`\u{1F916} ${currentProvider.displayName} ${hasApiKey ? "\u2705" : "\u26A0\uFE0F \uD0A4 \uD544\uC694"}`).setDisabled(true));
     menu.addSeparator();
     menu.addItem(
       (item) => item.setTitle("\u2702\uFE0F \uC120\uD0DD \uC601\uC5ED \uBD84\uC11D").setIcon("scissors").setDisabled(!hasApiKey).onClick(() => {
@@ -2769,9 +2741,7 @@ var AIDropdown = class {
       const isConfigured = this.hasApiKey(provider.id);
       const isSelected = this.settings.provider === provider.id;
       menu.addItem(
-        (item) => item.setTitle(
-          `  ${isSelected ? "\u25CF " : "\u25CB "}${provider.displayName} ${isConfigured ? "\u2705" : ""}`
-        ).setDisabled(!isConfigured).onClick(() => {
+        (item) => item.setTitle(`  ${isSelected ? "\u25CF " : "\u25CB "}${provider.displayName} ${isConfigured ? "\u2705" : ""}`).setDisabled(!isConfigured).onClick(() => {
           if (isConfigured) {
             this.onProviderChange(provider.id);
           }
@@ -3279,10 +3249,7 @@ var AnalysisModal = class extends import_obsidian11.Modal {
       Object.entries(AI_PROVIDERS).forEach(([key, provider]) => {
         var _a;
         const isConfigured = (_a = aiService == null ? void 0 : aiService.isProviderConfigured(key)) != null ? _a : false;
-        dropdown.addOption(
-          key,
-          `${provider.displayName} ${isConfigured ? "\u2705" : "\u26A0\uFE0F"}`
-        );
+        dropdown.addOption(key, `${provider.displayName} ${isConfigured ? "\u2705" : "\u26A0\uFE0F"}`);
       });
       dropdown.setValue(this.selectedProvider);
       dropdown.onChange((value) => {
@@ -3609,12 +3576,7 @@ var ProcessModal = class extends import_obsidian12.Modal {
   async updateResult(content) {
     if (!this.resultEl) return;
     this.resultEl.empty();
-    await import_obsidian12.MarkdownRenderer.renderMarkdown(
-      content,
-      this.resultEl,
-      "",
-      this.renderComponent
-    );
+    await import_obsidian12.MarkdownRenderer.renderMarkdown(content, this.resultEl, "", this.renderComponent);
   }
   /**
    * 액션 버튼 렌더링
@@ -3752,11 +3714,7 @@ var ProcessModal = class extends import_obsidian12.Modal {
       this.updateStatus();
       this.updateProgress(30);
       this.updateProgress(50);
-      const response = await aiService.generateTextWithProvider(
-        this.config.provider,
-        [{ role: "user", content: prompt2 }],
-        { temperature: 0.7, maxTokens: 4e3 }
-      );
+      const response = await aiService.generateTextWithProvider(this.config.provider, [{ role: "user", content: prompt2 }], { temperature: 0.7, maxTokens: 4e3 });
       const fullContent = response.content;
       this.resultContent = fullContent;
       await this.updateResult(fullContent);
@@ -4222,10 +4180,7 @@ var MultiSourceAnalysisModal = class extends import_obsidian13.Modal {
     new import_obsidian13.Setting(section).setName("AI \uC81C\uACF5\uC790").setDesc("\uBD84\uC11D\uC5D0 \uC0AC\uC6A9\uD560 AI\uB97C \uC120\uD0DD\uD558\uC138\uC694").addDropdown((dropdown) => {
       Object.values(AI_PROVIDERS).forEach((provider) => {
         const configured = hasApiKey(provider.id);
-        dropdown.addOption(
-          provider.id,
-          `${provider.displayName} ${configured ? "\u2705" : "\u26A0\uFE0F"}`
-        );
+        dropdown.addOption(provider.id, `${provider.displayName} ${configured ? "\u2705" : "\u26A0\uFE0F"}`);
       });
       dropdown.setValue(this.selectedProvider);
       dropdown.onChange((value) => {
@@ -4417,9 +4372,7 @@ var MultiSourceAnalysisModal = class extends import_obsidian13.Modal {
     }
     const aiService = getAIService();
     if (!(aiService == null ? void 0 : aiService.isProviderConfigured(this.selectedProvider))) {
-      showWarning(
-        `${AI_PROVIDERS[this.selectedProvider].displayName} API \uD0A4\uAC00 \uC124\uC815\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.`
-      );
+      showWarning(`${AI_PROVIDERS[this.selectedProvider].displayName} API \uD0A4\uAC00 \uC124\uC815\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.`);
       return;
     }
     const request = {
@@ -4531,10 +4484,7 @@ var GateView = class extends import_obsidian14.ItemView {
     }
     const loading = showLoading("\uD398\uC774\uC9C0 \uD074\uB9AC\uD551 \uC911...");
     try {
-      const result = await this.clipService.clipPage(
-        this.frame,
-        this.currentGateState.id
-      );
+      const result = await this.clipService.clipPage(this.frame, this.currentGateState.id);
       loading.hide();
       if (result.success && result.note) {
         showSuccess(`\uD074\uB9AC\uD551 \uC644\uB8CC: ${result.note.path}`);
@@ -4557,10 +4507,7 @@ var GateView = class extends import_obsidian14.ItemView {
     }
     const loading = showLoading("\uC120\uD0DD \uD14D\uC2A4\uD2B8 \uD074\uB9AC\uD551 \uC911...");
     try {
-      const result = await this.clipService.clipSelection(
-        this.frame,
-        this.currentGateState.id
-      );
+      const result = await this.clipService.clipSelection(this.frame, this.currentGateState.id);
       loading.hide();
       if (result.success && result.note) {
         showSuccess(`\uD074\uB9AC\uD551 \uC644\uB8CC: ${result.note.path}`);
@@ -4583,11 +4530,7 @@ var GateView = class extends import_obsidian14.ItemView {
     }
     const loading = showLoading(`${targetFile.basename}\uC5D0 \uCD94\uAC00 \uC911...`);
     try {
-      const result = await this.clipService.clipToNote(
-        this.frame,
-        this.currentGateState.id,
-        targetFile
-      );
+      const result = await this.clipService.clipToNote(this.frame, this.currentGateState.id, targetFile);
       loading.hide();
       if (result.success) {
         showSuccess(`\uD074\uB9AC\uD551\uC774 ${targetFile.basename}\uC5D0 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`);
@@ -4637,10 +4580,7 @@ var GateView = class extends import_obsidian14.ItemView {
         showError("\uD398\uC774\uC9C0 \uCF58\uD150\uCE20\uB97C \uCD94\uCD9C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
         return;
       }
-      const response = await aiService.summarizeContent(
-        content.textContent,
-        this.plugin.settings.ai.defaultLanguage
-      );
+      const response = await aiService.summarizeContent(content.textContent, this.plugin.settings.ai.defaultLanguage);
       loading.hide();
       if (response.success) {
         const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
@@ -4841,10 +4781,7 @@ ${response.content}
         return;
       }
       const loading = showLoading("\uC120\uD0DD \uD14D\uC2A4\uD2B8 AI \uCC98\uB9AC \uC911...");
-      const response = await aiService.summarizeContent(
-        selection.text,
-        this.plugin.settings.ai.defaultLanguage
-      );
+      const response = await aiService.summarizeContent(selection.text, this.plugin.settings.ai.defaultLanguage);
       loading.hide();
       if (response.success) {
         new import_obsidian14.Notice(`AI \uBD84\uC11D \uACB0\uACFC:
@@ -5077,10 +5014,10 @@ ${source.content}
         return sourceInfo;
       }).join("\n---\n\n");
       const analysisTypePrompts = {
-        "synthesis": "\uC5EC\uB7EC \uC18C\uC2A4\uC758 \uC815\uBCF4\uB97C \uC885\uD569\uD558\uC5EC \uD1B5\uD569\uB41C \uAD00\uC810\uC744 \uC81C\uC2DC\uD574\uC8FC\uC138\uC694. \uACF5\uD1B5\uC810, \uD575\uC2EC \uC778\uC0AC\uC774\uD2B8, \uADF8\uB9AC\uACE0 \uC0C8\uB85C\uC6B4 \uD1B5\uCC30\uC744 \uB3C4\uCD9C\uD574\uC8FC\uC138\uC694.",
-        "comparison": "\uAC01 \uC18C\uC2A4\uC758 \uAD00\uC810\uC744 \uBE44\uAD50 \uBD84\uC11D\uD574\uC8FC\uC138\uC694. \uC720\uC0AC\uC810\uACFC \uCC28\uC774\uC810, \uAC01\uAC01\uC758 \uAC15\uC810\uACFC \uC57D\uC810\uC744 \uBD84\uC11D\uD574\uC8FC\uC138\uC694.",
-        "summary": "\uBAA8\uB4E0 \uC18C\uC2A4\uC758 \uD575\uC2EC \uB0B4\uC6A9\uC744 \uAC04\uACB0\uD558\uAC8C \uC694\uC57D\uD574\uC8FC\uC138\uC694. \uC8FC\uC694 \uD3EC\uC778\uD2B8\uC640 \uACB0\uB860\uC744 \uC815\uB9AC\uD574\uC8FC\uC138\uC694.",
-        "custom": ""
+        synthesis: "\uC5EC\uB7EC \uC18C\uC2A4\uC758 \uC815\uBCF4\uB97C \uC885\uD569\uD558\uC5EC \uD1B5\uD569\uB41C \uAD00\uC810\uC744 \uC81C\uC2DC\uD574\uC8FC\uC138\uC694. \uACF5\uD1B5\uC810, \uD575\uC2EC \uC778\uC0AC\uC774\uD2B8, \uADF8\uB9AC\uACE0 \uC0C8\uB85C\uC6B4 \uD1B5\uCC30\uC744 \uB3C4\uCD9C\uD574\uC8FC\uC138\uC694.",
+        comparison: "\uAC01 \uC18C\uC2A4\uC758 \uAD00\uC810\uC744 \uBE44\uAD50 \uBD84\uC11D\uD574\uC8FC\uC138\uC694. \uC720\uC0AC\uC810\uACFC \uCC28\uC774\uC810, \uAC01\uAC01\uC758 \uAC15\uC810\uACFC \uC57D\uC810\uC744 \uBD84\uC11D\uD574\uC8FC\uC138\uC694.",
+        summary: "\uBAA8\uB4E0 \uC18C\uC2A4\uC758 \uD575\uC2EC \uB0B4\uC6A9\uC744 \uAC04\uACB0\uD558\uAC8C \uC694\uC57D\uD574\uC8FC\uC138\uC694. \uC8FC\uC694 \uD3EC\uC778\uD2B8\uC640 \uACB0\uB860\uC744 \uC815\uB9AC\uD574\uC8FC\uC138\uC694.",
+        custom: ""
       };
       const basePrompt = analysisTypePrompts[request.analysisType] || "";
       const fullPrompt = request.customPrompt ? `${request.customPrompt}
@@ -5116,10 +5053,10 @@ ${sourcesContext}
         return `- ${s.title}`;
       }).join("\n");
       const analysisTypeNames = {
-        "synthesis": "\uC885\uD569 \uBD84\uC11D",
-        "comparison": "\uBE44\uAD50 \uBD84\uC11D",
-        "summary": "\uC694\uC57D",
-        "custom": "\uCEE4\uC2A4\uD140 \uBD84\uC11D"
+        synthesis: "\uC885\uD569 \uBD84\uC11D",
+        comparison: "\uBE44\uAD50 \uBD84\uC11D",
+        summary: "\uC694\uC57D",
+        custom: "\uCEE4\uC2A4\uD140 \uBD84\uC11D"
       };
       const noteContent = `---
 type: multi-source-analysis
@@ -5189,10 +5126,7 @@ ${sourceRefs}
     this.plugin.settings.savedPrompts.push(prompt2);
     await this.plugin.saveSettings();
     if (this.aiDropdown) {
-      this.aiDropdown.updateSettings(
-        this.plugin.settings.ai,
-        this.plugin.settings.savedPrompts
-      );
+      this.aiDropdown.updateSettings(this.plugin.settings.ai, this.plugin.settings.savedPrompts);
     }
   }
   /**
@@ -5260,11 +5194,7 @@ ${sourceRefs}
     if (!this.useIframe) {
       controlRow.createSpan({ cls: "gate-divider" });
       if (this.clipDropdown) {
-        createClipButton(
-          controlRow,
-          this.clipDropdown,
-          () => this.handleClipPage()
-        );
+        createClipButton(controlRow, this.clipDropdown, () => this.handleClipPage());
       }
       if (this.aiDropdown) {
         const aiService = getAIService();

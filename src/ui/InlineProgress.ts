@@ -269,8 +269,7 @@ export class InlineProgress {
                 icon.textContent = this.getStepIcon(step.status)
             }
 
-            stepEl.style.color =
-                step.status === 'pending' ? 'var(--text-muted)' : 'var(--text-normal)'
+            stepEl.style.color = step.status === 'pending' ? 'var(--text-muted)' : 'var(--text-normal)'
 
             if (step.status === 'error') {
                 stepEl.style.color = '#f44336'
@@ -326,9 +325,6 @@ export function createSimpleProgress(container: HTMLElement): InlineProgress {
 /**
  * 스텝 프로그레스 생성 (편의 함수)
  */
-export function createStepProgress(
-    container: HTMLElement,
-    steps: ProgressStep[]
-): InlineProgress {
+export function createStepProgress(container: HTMLElement, steps: ProgressStep[]): InlineProgress {
     return new InlineProgress({ container, steps, showBar: true, compact: false })
 }

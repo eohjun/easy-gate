@@ -197,12 +197,7 @@ export function showLoading(message: string): ToastNotification {
 /**
  * 액션 버튼이 있는 토스트
  */
-export function showWithAction(
-    message: string,
-    actionLabel: string,
-    actionCallback: () => void,
-    type: ToastType = 'info'
-): ToastNotification {
+export function showWithAction(message: string, actionLabel: string, actionCallback: () => void, type: ToastType = 'info'): ToastNotification {
     return new ToastNotification().show(message, {
         type,
         duration: 0,

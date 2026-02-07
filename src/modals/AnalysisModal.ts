@@ -285,13 +285,11 @@ export class AnalysisModal extends Modal {
 
         // 편집 가능한 텍스트 영역
         const textAreaContainer = previewSection.createDiv({ cls: 'content-textarea-container' })
-        new Setting(textAreaContainer)
-            .setClass('content-textarea-setting')
-            .addTextArea(text => {
-                this.contentTextArea = text
-                text.setPlaceholder('분석할 텍스트를 여기에 입력하거나 붙여넣으세요...\n\n💡 팁: 웹페이지에서 텍스트를 드래그하여 선택한 후 이 모달을 열면 자동으로 표시됩니다.')
-                text.setValue(this.editableContent)
-                text.inputEl.style.cssText = `
+        new Setting(textAreaContainer).setClass('content-textarea-setting').addTextArea((text) => {
+            this.contentTextArea = text
+            text.setPlaceholder('분석할 텍스트를 여기에 입력하거나 붙여넣으세요...\n\n💡 팁: 웹페이지에서 텍스트를 드래그하여 선택한 후 이 모달을 열면 자동으로 표시됩니다.')
+            text.setValue(this.editableContent)
+            text.inputEl.style.cssText = `
                     width: 100%;
                     min-height: 150px;
                     max-height: 250px;
@@ -303,11 +301,11 @@ export class AnalysisModal extends Modal {
                     border: 1px solid var(--background-modifier-border);
                     background: var(--background-primary);
                 `
-                text.onChange(value => {
-                    this.editableContent = value
-                    this.updateContentStats()
-                })
+            text.onChange((value) => {
+                this.editableContent = value
+                this.updateContentStats()
             })
+        })
 
         // 콘텐츠 통계 (동적 업데이트)
         this.statsContainer = previewSection.createDiv({ cls: 'content-stats' })
@@ -332,7 +330,7 @@ export class AnalysisModal extends Modal {
 
         const content = this.editableContent
         const contentLength = content.length
-        const wordCount = content.split(/\s+/).filter(w => w).length
+        const wordCount = content.split(/\s+/).filter((w) => w).length
         const tokenEstimate = Math.ceil(contentLength / 4)
 
         this.statsContainer.empty()
@@ -367,7 +365,7 @@ export class AnalysisModal extends Modal {
         `
 
         // 기본 템플릿
-        ANALYSIS_TEMPLATES.forEach(template => {
+        ANALYSIS_TEMPLATES.forEach((template) => {
             this.createTemplateCard(template)
         })
 
@@ -385,7 +383,7 @@ export class AnalysisModal extends Modal {
                 margin-top: 8px;
             `
 
-            this.savedPrompts.forEach(prompt => {
+            this.savedPrompts.forEach((prompt) => {
                 const chip = savedGrid.createEl('button', {
                     text: `💬 ${prompt.name}`,
                     cls: 'saved-prompt-chip'
@@ -414,7 +412,7 @@ export class AnalysisModal extends Modal {
     /**
      * 템플릿 카드 생성
      */
-    private createTemplateCard(template: typeof ANALYSIS_TEMPLATES[0]): void {
+    private createTemplateCard(template: (typeof ANALYSIS_TEMPLATES)[0]): void {
         if (!this.templateContainer) return
 
         const card = this.templateContainer.createDiv({ cls: 'template-card' })
@@ -494,25 +492,23 @@ export class AnalysisModal extends Modal {
         promptDesc.style.cssText = `font-size: 12px; color: var(--text-muted); margin-bottom: 8px;`
         promptDesc.textContent = '템플릿 대신 직접 프롬프트를 입력하거나, 추가 지시사항을 작성할 수 있습니다.'
 
-        new Setting(promptSection)
-            .setClass('custom-prompt-setting')
-            .addTextArea(text => {
-                this.promptTextArea = text
-                text.setPlaceholder('예: "위 내용을 초등학생도 이해할 수 있게 쉽게 설명해주세요..."')
-                text.setValue(this.customPrompt)
-                text.inputEl.style.cssText = `
+        new Setting(promptSection).setClass('custom-prompt-setting').addTextArea((text) => {
+            this.promptTextArea = text
+            text.setPlaceholder('예: "위 내용을 초등학생도 이해할 수 있게 쉽게 설명해주세요..."')
+            text.setValue(this.customPrompt)
+            text.inputEl.style.cssText = `
                     width: 100%;
                     min-height: 80px;
                     resize: vertical;
                 `
-                text.onChange(value => {
-                    this.customPrompt = value
-                    if (value.trim()) {
-                        this.selectedTemplateId = null
-                        this.updateTemplateSelection()
-                    }
-                })
+            text.onChange((value) => {
+                this.customPrompt = value
+                if (value.trim()) {
+                    this.selectedTemplateId = null
+                    this.updateTemplateSelection()
+                }
             })
+        })
 
         // 프롬프트 저장 버튼
         if (this.onSavePrompt) {
@@ -546,19 +542,16 @@ export class AnalysisModal extends Modal {
         new Setting(optionsSection)
             .setName('AI Provider')
             .setDesc('분석에 사용할 AI 서비스를 선택합니다.')
-            .addDropdown(dropdown => {
+            .addDropdown((dropdown) => {
                 const aiService = getAIService()
 
                 Object.entries(AI_PROVIDERS).forEach(([key, provider]) => {
                     const isConfigured = aiService?.isProviderConfigured(key as AIProviderType) ?? false
-                    dropdown.addOption(
-                        key,
-                        `${provider.displayName} ${isConfigured ? '✅' : '⚠️'}`
-                    )
+                    dropdown.addOption(key, `${provider.displayName} ${isConfigured ? '✅' : '⚠️'}`)
                 })
 
                 dropdown.setValue(this.selectedProvider)
-                dropdown.onChange(value => {
+                dropdown.onChange((value) => {
                     this.selectedProvider = value as AIProviderType
                 })
             })
@@ -567,13 +560,13 @@ export class AnalysisModal extends Modal {
         new Setting(optionsSection)
             .setName('출력 형식')
             .setDesc('분석 결과의 형식을 선택합니다.')
-            .addDropdown(dropdown => {
+            .addDropdown((dropdown) => {
                 dropdown.addOption('markdown', '📄 마크다운')
                 dropdown.addOption('summary', '📋 요약 (짧은 형태)')
                 dropdown.addOption('bullets', '• 글머리 기호')
                 dropdown.addOption('qa', '❓ Q&A 형식')
                 dropdown.setValue(this.outputFormat)
-                dropdown.onChange(value => {
+                dropdown.onChange((value) => {
                     this.outputFormat = value as typeof this.outputFormat
                 })
             })
@@ -582,9 +575,9 @@ export class AnalysisModal extends Modal {
         new Setting(optionsSection)
             .setName('메타데이터 포함')
             .setDesc('URL, 작성자, 날짜 등의 메타데이터를 노트에 포함합니다.')
-            .addToggle(toggle => {
+            .addToggle((toggle) => {
                 toggle.setValue(this.includeMetadata)
-                toggle.onChange(value => {
+                toggle.onChange((value) => {
                     this.includeMetadata = value
                 })
             })
@@ -709,7 +702,7 @@ export class AnalysisModal extends Modal {
      * 템플릿 프롬프트 가져오기
      */
     static getTemplatePrompt(templateId: string): string | null {
-        const template = ANALYSIS_TEMPLATES.find(t => t.id === templateId)
+        const template = ANALYSIS_TEMPLATES.find((t) => t.id === templateId)
         return template?.prompt || null
     }
 

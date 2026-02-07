@@ -182,9 +182,7 @@ export class SettingTab extends PluginSettingTab {
             const statusIcon = hasApiKey ? '🟢' : '⚪'
             const statusText = hasApiKey ? '연결됨' : '미설정'
 
-            const settingEl = new Setting(containerEl)
-                .setName(`${statusIcon} ${providerConfig.displayName}`)
-                .setDesc(`상태: ${statusText} | 모델: ${currentModel}`)
+            const settingEl = new Setting(containerEl).setName(`${statusIcon} ${providerConfig.displayName}`).setDesc(`상태: ${statusText} | 모델: ${currentModel}`)
 
             // 임시 API 키 저장용
             let tempApiKey = ''
@@ -207,18 +205,16 @@ export class SettingTab extends PluginSettingTab {
 
             // 저장 버튼
             settingEl.addButton((button) => {
-                button
-                    .setButtonText('저장')
-                    .onClick(async () => {
-                        if (tempApiKey.length > 0) {
-                            this.plugin.settings.ai.apiKeys[providerId] = tempApiKey
-                            await this.plugin.saveSettings()
-                            new Notice(`✅ ${providerConfig.displayName} API 키가 저장되었습니다.`)
-                            this.display() // UI 새로고침
-                        } else {
-                            new Notice('⚠️ API 키를 입력해주세요.')
-                        }
-                    })
+                button.setButtonText('저장').onClick(async () => {
+                    if (tempApiKey.length > 0) {
+                        this.plugin.settings.ai.apiKeys[providerId] = tempApiKey
+                        await this.plugin.saveSettings()
+                        new Notice(`✅ ${providerConfig.displayName} API 키가 저장되었습니다.`)
+                        this.display() // UI 새로고침
+                    } else {
+                        new Notice('⚠️ API 키를 입력해주세요.')
+                    }
+                })
             })
 
             // 테스트 버튼 (키가 있을 때만 활성화)
@@ -253,10 +249,7 @@ export class SettingTab extends PluginSettingTab {
                     .setIcon('pencil')
                     .setTooltip('모델 변경')
                     .onClick(async () => {
-                        const newModel = prompt(
-                            `${providerConfig.displayName} 모델명을 입력하세요:`,
-                            currentModel
-                        )
+                        const newModel = prompt(`${providerConfig.displayName} 모델명을 입력하세요:`, currentModel)
                         if (newModel && newModel.trim().length > 0) {
                             this.plugin.settings.ai.models[providerId] = newModel.trim()
                             await this.plugin.saveSettings()
@@ -299,7 +292,7 @@ export class SettingTab extends PluginSettingTab {
             statusEl.style.cssText = 'margin-bottom: 12px; padding: 8px 12px; background: var(--background-modifier-success); border-radius: 6px; color: var(--text-success);'
             statusEl.appendText('✅ ')
             statusEl.createEl('strong', { text: `${configuredProviders.length}개` })
-            statusEl.appendText(`의 Provider가 설정되어 있습니다: ${configuredProviders.map(id => AI_PROVIDERS[id].displayName).join(', ')}`)
+            statusEl.appendText(`의 Provider가 설정되어 있습니다: ${configuredProviders.map((id) => AI_PROVIDERS[id].displayName).join(', ')}`)
         } else {
             const statusEl = containerEl.createEl('div', { cls: 'setting-item-description' })
             statusEl.style.cssText = 'margin-bottom: 12px; padding: 8px 12px; background: var(--background-modifier-error); border-radius: 6px; color: var(--text-error);'
@@ -517,13 +510,12 @@ export class SettingTab extends PluginSettingTab {
         }
 
         // 새 프롬프트 추가 버튼
-        new Setting(promptsContainer)
-            .addButton((button) => {
-                button.setButtonText('+ 새 프롬프트 추가')
-                button.onClick(() => {
-                    this.addNewPrompt()
-                })
+        new Setting(promptsContainer).addButton((button) => {
+            button.setButtonText('+ 새 프롬프트 추가')
+            button.onClick(() => {
+                this.addNewPrompt()
             })
+        })
     }
 
     /**

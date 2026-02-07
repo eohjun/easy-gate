@@ -4,15 +4,7 @@
  * 모든 AI 프로바이더의 공통 기능을 제공합니다.
  */
 
-import {
-    AIProvider,
-    AIProviderType,
-    AIProviderConfig,
-    AIProviderResponse,
-    AIMessage,
-    AIRequestOptions,
-    AI_PROVIDERS
-} from '../types'
+import { AIProvider, AIProviderType, AIProviderConfig, AIProviderResponse, AIMessage, AIRequestOptions, AI_PROVIDERS } from '../types'
 import { requestUrl, RequestUrlParam } from 'obsidian'
 
 export abstract class BaseProvider implements AIProvider {
@@ -26,18 +18,9 @@ export abstract class BaseProvider implements AIProvider {
     /**
      * HTTP 요청 헬퍼 (Obsidian의 requestUrl 사용)
      */
-    protected async makeRequest<T>(
-        _url: string,
-        options: RequestUrlParam,
-        timeoutMs: number = 15000
-    ): Promise<T> {
+    protected async makeRequest<T>(_url: string, options: RequestUrlParam, timeoutMs: number = 15000): Promise<T> {
         try {
-            const response = await Promise.race([
-                requestUrl(options),
-                new Promise<never>((_, reject) =>
-                    setTimeout(() => reject(new Error('Request timed out')), timeoutMs)
-                )
-            ])
+            const response = await Promise.race([requestUrl(options), new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Request timed out')), timeoutMs))])
             return response.json as T
         } catch (error) {
             if (error instanceof Error) {
@@ -114,9 +97,5 @@ export abstract class BaseProvider implements AIProvider {
     /**
      * 텍스트 생성 (서브클래스에서 구현)
      */
-    abstract generateText(
-        messages: AIMessage[],
-        apiKey: string,
-        options?: AIRequestOptions
-    ): Promise<AIProviderResponse>
+    abstract generateText(messages: AIMessage[], apiKey: string, options?: AIRequestOptions): Promise<AIProviderResponse>
 }

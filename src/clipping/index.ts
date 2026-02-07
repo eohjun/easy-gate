@@ -17,10 +17,5 @@ export { NoteGenerator } from './NoteGenerator'
 export type { NoteGeneratorOptions, GeneratedNote } from './NoteGenerator'
 
 // Clip Service
-export {
-    ClipService,
-    initializeClipService,
-    getClipService,
-    updateClipServiceSettings
-} from './ClipService'
+export { ClipService, initializeClipService, getClipService, updateClipServiceSettings } from './ClipService'
 export type { ClipServiceOptions, ClipResult } from './ClipService'

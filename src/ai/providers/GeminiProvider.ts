@@ -6,12 +6,7 @@
  */
 
 import { BaseProvider } from './BaseProvider'
-import {
-    AIProviderType,
-    AIProviderResponse,
-    AIMessage,
-    AIRequestOptions
-} from '../types'
+import { AIProviderType, AIProviderResponse, AIMessage, AIRequestOptions } from '../types'
 
 interface GeminiContent {
     parts: { text: string }[]
@@ -85,11 +80,7 @@ export class GeminiProvider extends BaseProvider {
     /**
      * 텍스트 생성
      */
-    async generateText(
-        messages: AIMessage[],
-        apiKey: string,
-        options?: AIRequestOptions
-    ): Promise<AIProviderResponse> {
+    async generateText(messages: AIMessage[], apiKey: string, options?: AIRequestOptions): Promise<AIProviderResponse> {
         const model = options?.model || this.config.defaultModel
         const url = `${this.config.endpoint}/models/${model}:generateContent?key=${apiKey}`
 
@@ -140,9 +131,7 @@ export class GeminiProvider extends BaseProvider {
                 }
             }
 
-            const generatedText = response.candidates[0].content.parts
-                .map((part) => part.text)
-                .join('')
+            const generatedText = response.candidates[0].content.parts.map((part) => part.text).join('')
 
             return {
                 success: true,

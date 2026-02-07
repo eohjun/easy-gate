@@ -7,12 +7,7 @@
  */
 
 import { BaseProvider } from './BaseProvider'
-import {
-    AIProviderType,
-    AIProviderResponse,
-    AIMessage,
-    AIRequestOptions
-} from '../types'
+import { AIProviderType, AIProviderResponse, AIMessage, AIRequestOptions } from '../types'
 
 interface GLMMessage {
     role: 'system' | 'user' | 'assistant'
@@ -72,17 +67,21 @@ export class GLMProvider extends BaseProvider {
         }
 
         // 간단한 JWT 생성 (라이브러리 없이)
-        const header = this.base64UrlEncode(JSON.stringify({
-            alg: 'HS256',
-            sign_type: 'SIGN'
-        }))
+        const header = this.base64UrlEncode(
+            JSON.stringify({
+                alg: 'HS256',
+                sign_type: 'SIGN'
+            })
+        )
 
         const now = Math.floor(Date.now() / 1000)
-        const payload = this.base64UrlEncode(JSON.stringify({
-            api_key: id,
-            exp: now + 3600, // 1시간 유효
-            timestamp: now * 1000
-        }))
+        const payload = this.base64UrlEncode(
+            JSON.stringify({
+                api_key: id,
+                exp: now + 3600, // 1시간 유효
+                timestamp: now * 1000
+            })
+        )
 
         // 실제 서명은 서버에서 검증하므로 간단한 더미 서명 사용
         // (실제 배포 시에는 적절한 JWT 라이브러리 사용 권장)
@@ -109,7 +108,7 @@ export class GLMProvider extends BaseProvider {
                 url,
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
+                    Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
@@ -129,11 +128,7 @@ export class GLMProvider extends BaseProvider {
     /**
      * 텍스트 생성
      */
-    async generateText(
-        messages: AIMessage[],
-        apiKey: string,
-        options?: AIRequestOptions
-    ): Promise<AIProviderResponse> {
+    async generateText(messages: AIMessage[], apiKey: string, options?: AIRequestOptions): Promise<AIProviderResponse> {
         const model = options?.model || this.config.defaultModel
         const url = `${this.config.endpoint}/chat/completions`
         const token = this.generateToken(apiKey)
@@ -154,7 +149,7 @@ export class GLMProvider extends BaseProvider {
                 url,
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
+                    Authorization: `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(requestBody)

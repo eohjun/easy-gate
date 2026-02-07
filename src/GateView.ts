@@ -49,10 +49,12 @@ export class GateView extends ItemView {
 
         // ClipService 초기화 (Desktop only)
         if (!this.useIframe) {
-            this.clipService = getClipService() || initializeClipService({
-                vault: this.app.vault,
-                settings: this.plugin.settings.clipping
-            })
+            this.clipService =
+                getClipService() ||
+                initializeClipService({
+                    vault: this.app.vault,
+                    settings: this.plugin.settings.clipping
+                })
         }
     }
 
@@ -139,10 +141,7 @@ export class GateView extends ItemView {
         const loading = showLoading('페이지 클리핑 중...')
 
         try {
-            const result = await this.clipService.clipPage(
-                this.frame as WebviewTag,
-                this.currentGateState.id
-            )
+            const result = await this.clipService.clipPage(this.frame as WebviewTag, this.currentGateState.id)
 
             loading.hide()
 
@@ -170,10 +169,7 @@ export class GateView extends ItemView {
         const loading = showLoading('선택 텍스트 클리핑 중...')
 
         try {
-            const result = await this.clipService.clipSelection(
-                this.frame as WebviewTag,
-                this.currentGateState.id
-            )
+            const result = await this.clipService.clipSelection(this.frame as WebviewTag, this.currentGateState.id)
 
             loading.hide()
 
@@ -201,11 +197,7 @@ export class GateView extends ItemView {
         const loading = showLoading(`${targetFile.basename}에 추가 중...`)
 
         try {
-            const result = await this.clipService.clipToNote(
-                this.frame as WebviewTag,
-                this.currentGateState.id,
-                targetFile
-            )
+            const result = await this.clipService.clipToNote(this.frame as WebviewTag, this.currentGateState.id, targetFile)
 
             loading.hide()
 
@@ -270,10 +262,7 @@ export class GateView extends ItemView {
             }
 
             // AI 요약 생성
-            const response = await aiService.summarizeContent(
-                content.textContent,
-                this.plugin.settings.ai.defaultLanguage
-            )
+            const response = await aiService.summarizeContent(content.textContent, this.plugin.settings.ai.defaultLanguage)
 
             loading.hide()
 
@@ -382,7 +371,6 @@ ${response.content}
             }
 
             await this.runAnalysis(clipData, config)
-
         } catch (error) {
             loading.hide()
             const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류'
@@ -507,10 +495,7 @@ ${response.content}
 
             const loading = showLoading('선택 텍스트 AI 처리 중...')
 
-            const response = await aiService.summarizeContent(
-                selection.text,
-                this.plugin.settings.ai.defaultLanguage
-            )
+            const response = await aiService.summarizeContent(selection.text, this.plugin.settings.ai.defaultLanguage)
 
             loading.hide()
 
@@ -591,7 +576,6 @@ ${response.content}
                 }
             })
             modal.open()
-
         } catch (error) {
             loading.hide()
             const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류'
@@ -725,7 +709,6 @@ ${response.content}
                 }
             })
             modal.open()
-
         } catch (error) {
             loading.hide()
             const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류'
@@ -779,8 +762,9 @@ ${response.content}
             }
 
             // 소스들을 결합하여 컨텍스트 생성
-            const sourcesContext = request.sources.map((source: SourceItem, index: number) => {
-                const sourceInfo = `[소스 ${index + 1}] ${source.title}
+            const sourcesContext = request.sources
+                .map((source: SourceItem, index: number) => {
+                    const sourceInfo = `[소스 ${index + 1}] ${source.title}
 타입: ${source.type === 'web-clip' ? '웹 클리핑' : source.type === 'obsidian-note' ? '옵시디언 노트' : source.type === 'selection' ? '선택 텍스트' : '직접 입력'}
 ${source.metadata.url ? `URL: ${source.metadata.url}` : ''}
 ${source.metadata.filePath ? `파일: ${source.metadata.filePath}` : ''}
@@ -789,21 +773,20 @@ ${source.metadata.filePath ? `파일: ${source.metadata.filePath}` : ''}
 내용:
 ${source.content}
 `
-                return sourceInfo
-            }).join('\n---\n\n')
+                    return sourceInfo
+                })
+                .join('\n---\n\n')
 
             // 분석 타입에 따른 기본 프롬프트
             const analysisTypePrompts: Record<string, string> = {
-                'synthesis': '여러 소스의 정보를 종합하여 통합된 관점을 제시해주세요. 공통점, 핵심 인사이트, 그리고 새로운 통찰을 도출해주세요.',
-                'comparison': '각 소스의 관점을 비교 분석해주세요. 유사점과 차이점, 각각의 강점과 약점을 분석해주세요.',
-                'summary': '모든 소스의 핵심 내용을 간결하게 요약해주세요. 주요 포인트와 결론을 정리해주세요.',
-                'custom': ''
+                synthesis: '여러 소스의 정보를 종합하여 통합된 관점을 제시해주세요. 공통점, 핵심 인사이트, 그리고 새로운 통찰을 도출해주세요.',
+                comparison: '각 소스의 관점을 비교 분석해주세요. 유사점과 차이점, 각각의 강점과 약점을 분석해주세요.',
+                summary: '모든 소스의 핵심 내용을 간결하게 요약해주세요. 주요 포인트와 결론을 정리해주세요.',
+                custom: ''
             }
 
             const basePrompt = analysisTypePrompts[request.analysisType] || ''
-            const fullPrompt = request.customPrompt
-                ? `${request.customPrompt}\n\n${basePrompt}`
-                : basePrompt
+            const fullPrompt = request.customPrompt ? `${request.customPrompt}\n\n${basePrompt}` : basePrompt
 
             const systemPrompt = `당신은 다중 소스 분석 전문가입니다. 여러 출처의 정보를 분석하고 통합하는 역할을 합니다.
 
@@ -832,20 +815,22 @@ ${sourcesContext}
             loading.hide()
 
             // 결과를 노트로 저장
-            const sourceRefs = request.sources.map((s: SourceItem) => {
-                if (s.metadata.url) {
-                    return `- [${s.title}](${s.metadata.url})`
-                } else if (s.metadata.filePath) {
-                    return `- [[${s.metadata.filePath}|${s.title}]]`
-                }
-                return `- ${s.title}`
-            }).join('\n')
+            const sourceRefs = request.sources
+                .map((s: SourceItem) => {
+                    if (s.metadata.url) {
+                        return `- [${s.title}](${s.metadata.url})`
+                    } else if (s.metadata.filePath) {
+                        return `- [[${s.metadata.filePath}|${s.title}]]`
+                    }
+                    return `- ${s.title}`
+                })
+                .join('\n')
 
             const analysisTypeNames: Record<string, string> = {
-                'synthesis': '종합 분석',
-                'comparison': '비교 분석',
-                'summary': '요약',
-                'custom': '커스텀 분석'
+                synthesis: '종합 분석',
+                comparison: '비교 분석',
+                summary: '요약',
+                custom: '커스텀 분석'
             }
 
             const noteContent = `---
@@ -880,7 +865,6 @@ ${sourceRefs}
 
             const title = `멀티소스_${analysisTypeNames[request.analysisType]}_${new Date().toISOString().split('T')[0]}`
             await this.saveAnalysisResult(noteContent, title)
-
         } catch (error) {
             loading.hide()
             const errorMessage = error instanceof Error ? error.message : '분석 실패'
@@ -891,12 +875,7 @@ ${sourceRefs}
     /**
      * 멀티 소스 AI API 호출 (AIService 위임)
      */
-    private async callMultiSourceAI(
-        provider: string,
-        _apiKey: string,
-        systemPrompt: string,
-        userPrompt: string
-    ): Promise<string> {
+    private async callMultiSourceAI(provider: string, _apiKey: string, systemPrompt: string, userPrompt: string): Promise<string> {
         const aiService = getAIService()
         if (!aiService) {
             throw new Error('AI 서비스가 초기화되지 않았습니다.')
@@ -930,10 +909,7 @@ ${sourceRefs}
 
         // AIDropdown 업데이트
         if (this.aiDropdown) {
-            this.aiDropdown.updateSettings(
-                this.plugin.settings.ai,
-                this.plugin.settings.savedPrompts
-            )
+            this.aiDropdown.updateSettings(this.plugin.settings.ai, this.plugin.settings.savedPrompts)
         }
     }
 
@@ -949,16 +925,16 @@ ${sourceRefs}
     }
 
     private drawTopBar(): void {
-        this.topBarEl = this.contentEl.createDiv({ cls: 'gate-top-bar' });
+        this.topBarEl = this.contentEl.createDiv({ cls: 'gate-top-bar' })
 
         // 1. Tab Bar (Gate Switcher)
-        const tabBar = this.topBarEl.createDiv({ cls: 'gate-tab-bar' });
-        tabBar.setAttribute('role', 'tablist');
-        tabBar.setAttribute('aria-label', 'Gate tabs');
-        this.renderTabBar(tabBar);
+        const tabBar = this.topBarEl.createDiv({ cls: 'gate-tab-bar' })
+        tabBar.setAttribute('role', 'tablist')
+        tabBar.setAttribute('aria-label', 'Gate tabs')
+        this.renderTabBar(tabBar)
 
         // 2. Control Row (Address + Actions)
-        const controlRow = this.topBarEl.createDiv({ cls: 'gate-control-row' });
+        const controlRow = this.topBarEl.createDiv({ cls: 'gate-control-row' })
 
         // Navigation Buttons
         const backBtn = new ButtonComponent(controlRow)
@@ -969,8 +945,8 @@ ${sourceRefs}
                     const webview = this.frame as WebviewTag
                     if (webview.canGoBack()) webview.goBack()
                 }
-            });
-        backBtn.buttonEl.setAttribute('aria-label', 'Navigate back');
+            })
+        backBtn.buttonEl.setAttribute('aria-label', 'Navigate back')
 
         const fwdBtn = new ButtonComponent(controlRow)
             .setIcon('arrow-right')
@@ -980,67 +956,63 @@ ${sourceRefs}
                     const webview = this.frame as WebviewTag
                     if (webview.canGoForward()) webview.goForward()
                 }
-            });
-        fwdBtn.buttonEl.setAttribute('aria-label', 'Navigate forward');
+            })
+        fwdBtn.buttonEl.setAttribute('aria-label', 'Navigate forward')
 
         // Address Bar
-        const addressInput = new TextComponent(controlRow);
-        addressInput.setPlaceholder('https://...');
-        addressInput.inputEl.addClass('gate-address-input');
-        addressInput.setValue(this.options.url);
+        const addressInput = new TextComponent(controlRow)
+        addressInput.setPlaceholder('https://...')
+        addressInput.inputEl.addClass('gate-address-input')
+        addressInput.setValue(this.options.url)
         this.registerDomEvent(addressInput.inputEl, 'keydown', async (e) => {
             if (e.key === 'Enter') {
-                const url = addressInput.getValue();
+                const url = addressInput.getValue()
                 if (url) {
-                    await this.handleAddressEnter(url);
+                    await this.handleAddressEnter(url)
                 }
             }
-        });
+        })
 
         // Current URL Listener to update address bar
         this.onFrameReady(() => {
             if (!this.useIframe) {
                 this.didNavigateListener = (e: any) => {
-                    addressInput.setValue(e.url);
-                };
+                    addressInput.setValue(e.url)
+                }
                 this.didNavigateInPageListener = (e: any) => {
-                    addressInput.setValue(e.url);
-                };
-                (this.frame as WebviewTag).addEventListener('did-navigate', this.didNavigateListener);
-                (this.frame as WebviewTag).addEventListener('did-navigate-in-page', this.didNavigateInPageListener);
+                    addressInput.setValue(e.url)
+                }
+                ;(this.frame as WebviewTag).addEventListener('did-navigate', this.didNavigateListener)
+                ;(this.frame as WebviewTag).addEventListener('did-navigate-in-page', this.didNavigateInPageListener)
             }
-        });
+        })
 
         // Tools Divider
-        controlRow.createSpan({ cls: 'gate-divider' });
+        controlRow.createSpan({ cls: 'gate-divider' })
 
         // Insert To Dropdown
-        const drop = new DropdownComponent(controlRow);
-        drop.addOption('cursor', 'Insert to: Cursor');
-        drop.addOption('bottom', 'Insert to: Bottom');
-        drop.addOption('new', 'Insert to: New Note');
-        drop.setValue('cursor');
-        drop.onChange((val) => this.insertMode = val as any);
+        const drop = new DropdownComponent(controlRow)
+        drop.addOption('cursor', 'Insert to: Cursor')
+        drop.addOption('bottom', 'Insert to: Bottom')
+        drop.addOption('new', 'Insert to: New Note')
+        drop.setValue('cursor')
+        drop.onChange((val) => (this.insertMode = val as any))
 
         // Apply Button
         new ButtonComponent(controlRow)
             .setIcon('download')
             .setTooltip('Apply Selection')
             .setButtonText('Apply')
-            .onClick(() => this.onApplyText());
+            .onClick(() => this.onApplyText())
 
         // Smart Buttons (Desktop only) - 📋 Clip, 🤖 AI
         if (!this.useIframe) {
             // Divider before smart buttons
-            controlRow.createSpan({ cls: 'gate-divider' });
+            controlRow.createSpan({ cls: 'gate-divider' })
 
             // 📋 Clip Button with dropdown
             if (this.clipDropdown) {
-                createClipButton(
-                    controlRow,
-                    this.clipDropdown,
-                    () => this.handleClipPage()
-                )
+                createClipButton(controlRow, this.clipDropdown, () => this.handleClipPage())
             }
 
             // 🤖 AI Button with dropdown
@@ -1059,151 +1031,151 @@ ${sourceRefs}
     }
 
     private renderTabBar(container: HTMLElement) {
-        container.empty();
-        const gates = this.plugin.settings.gates;
+        container.empty()
+        const gates = this.plugin.settings.gates
 
         for (const id in gates) {
-            const gate = gates[id];
-            const isActive = gate.id === this.currentGateState.id;
-            const tab = container.createDiv({ cls: 'gate-tab' });
+            const gate = gates[id]
+            const isActive = gate.id === this.currentGateState.id
+            const tab = container.createDiv({ cls: 'gate-tab' })
 
             // ARIA: tab role and state
-            tab.setAttribute('role', 'tab');
-            tab.setAttribute('aria-selected', String(isActive));
-            tab.setAttribute('aria-label', gate.title);
-            tab.tabIndex = isActive ? 0 : -1;
+            tab.setAttribute('role', 'tab')
+            tab.setAttribute('aria-selected', String(isActive))
+            tab.setAttribute('aria-label', gate.title)
+            tab.tabIndex = isActive ? 0 : -1
 
-            if (isActive) tab.addClass('active');
+            if (isActive) tab.addClass('active')
 
             // Icon
-            const iconContainer = tab.createSpan({ cls: 'gate-tab-icon' });
-            setIcon(iconContainer, gate.icon || 'globe');
+            const iconContainer = tab.createSpan({ cls: 'gate-tab-icon' })
+            setIcon(iconContainer, gate.icon || 'globe')
 
             // Title
-            tab.createSpan({ text: gate.title, cls: 'gate-tab-title' });
+            tab.createSpan({ text: gate.title, cls: 'gate-tab-title' })
 
             // Close button (X) - 각 탭에 삭제 버튼 추가
-            const closeBtn = tab.createSpan({ cls: 'gate-tab-close' });
-            setIcon(closeBtn, 'x');
-            closeBtn.setAttribute('role', 'button');
-            closeBtn.setAttribute('aria-label', `Close ${gate.title}`);
-            closeBtn.tabIndex = 0;
+            const closeBtn = tab.createSpan({ cls: 'gate-tab-close' })
+            setIcon(closeBtn, 'x')
+            closeBtn.setAttribute('role', 'button')
+            closeBtn.setAttribute('aria-label', `Close ${gate.title}`)
+            closeBtn.tabIndex = 0
             closeBtn.addEventListener('click', async (e) => {
-                e.stopPropagation(); // 탭 클릭 이벤트 전파 방지
-                const confirmDelete = confirm(`"${gate.title}" 게이트를 삭제하시겠습니까?`);
+                e.stopPropagation() // 탭 클릭 이벤트 전파 방지
+                const confirmDelete = confirm(`"${gate.title}" 게이트를 삭제하시겠습니까?`)
                 if (confirmDelete) {
-                    await this.plugin.removeGate(gate.id);
-                    this.renderTabBar(container);
-                    new Notice(`"${gate.title}" 게이트가 삭제되었습니다.`);
+                    await this.plugin.removeGate(gate.id)
+                    this.renderTabBar(container)
+                    new Notice(`"${gate.title}" 게이트가 삭제되었습니다.`)
                 }
-            });
+            })
             closeBtn.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    closeBtn.click();
+                    e.preventDefault()
+                    closeBtn.click()
                 }
-            });
+            })
 
             tab.addEventListener('click', () => {
-                this.navigateTo(gate.url);
+                this.navigateTo(gate.url)
                 // currentGateState 업데이트 (readonly options 대신)
-                this.currentGateState.url = gate.url;
-                this.currentGateState.id = gate.id;
-                this.currentGateState.title = gate.title;
-                this.renderTabBar(container); // Re-render to update active state
-            });
+                this.currentGateState.url = gate.url
+                this.currentGateState.id = gate.id
+                this.currentGateState.title = gate.title
+                this.renderTabBar(container) // Re-render to update active state
+            })
         }
     }
 
     async handleAddressEnter(url: string) {
         if (!url.startsWith('http')) {
-            url = 'https://' + url;
+            url = 'https://' + url
         }
 
         // Check if exists
-        const existing = this.plugin.findGateBy('url', url);
+        const existing = this.plugin.findGateBy('url', url)
         if (existing) {
-            this.navigateTo(existing.url);
-            new Notice(`Switched to ${existing.title}`);
+            this.navigateTo(existing.url)
+            new Notice(`Switched to ${existing.title}`)
         } else {
             // Create New Gate
-            const domain = new URL(url).hostname;
+            const domain = new URL(url).hostname
             const newGate = normalizeGateOption({
                 id: Math.random().toString(36).substring(2, 15),
                 title: domain,
                 url: url,
                 icon: 'globe'
-            });
+            })
             // We need to cast id as string if normalize expects it.
 
-            // Actually generateUuid is private in main.ts. 
+            // Actually generateUuid is private in main.ts.
             // Ideally we expose it or Duplicate logic.
-            newGate.id = Math.random().toString(36).substring(2, 10);
+            newGate.id = Math.random().toString(36).substring(2, 10)
 
-            await this.plugin.addGate(newGate);
-            new Notice(`New Gate Created: ${domain}`);
+            await this.plugin.addGate(newGate)
+            new Notice(`New Gate Created: ${domain}`)
 
             // Refresh Tab bar
-            const bar = this.topBarEl.querySelector('.gate-tab-bar') as HTMLElement;
-            if (bar) this.renderTabBar(bar);
+            const bar = this.topBarEl.querySelector('.gate-tab-bar') as HTMLElement
+            if (bar) this.renderTabBar(bar)
 
-            this.navigateTo(url);
+            this.navigateTo(url)
         }
     }
 
     navigateTo(url: string) {
         if (this.frame instanceof HTMLIFrameElement) {
-            this.frame.src = url;
+            this.frame.src = url
         } else {
-            this.frame.loadURL(url);
+            this.frame.loadURL(url)
         }
     }
 
     async onApplyText() {
-        let text = '';
+        let text = ''
         if (this.frame instanceof HTMLIFrameElement) {
             // Cannot easily get selection from cross-origin iframe
-            new Notice("Cannot extract text from IFrame mode (Mobile/Restricted).");
-            return;
+            new Notice('Cannot extract text from IFrame mode (Mobile/Restricted).')
+            return
         } else {
             try {
-                text = await (this.frame as WebviewTag).executeJavaScript('window.getSelection().toString()');
+                text = await (this.frame as WebviewTag).executeJavaScript('window.getSelection().toString()')
             } catch (e) {
-                console.error(e);
+                console.error(e)
             }
         }
 
         if (!text || text.trim() === '') {
-            new Notice('No text selected in the browser.');
-            return;
+            new Notice('No text selected in the browser.')
+            return
         }
 
         // 마크다운 위계 적용: 선택된 텍스트를 정리된 형태로 변환
-        const formattedText = this.formatTextAsMarkdown(text);
+        const formattedText = this.formatTextAsMarkdown(text)
 
-        const activeView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView);
+        const activeView = this.plugin.app.workspace.getActiveViewOfType(MarkdownView)
 
         if (this.insertMode === 'new') {
             try {
                 // 페이지 메타데이터 추출
-                const currentUrl = await ContentExtractor.getCurrentUrl(this.frame as WebviewTag);
-                const pageContent = await ContentExtractor.extractPageContent(this.frame as WebviewTag);
+                const currentUrl = await ContentExtractor.getCurrentUrl(this.frame as WebviewTag)
+                const pageContent = await ContentExtractor.extractPageContent(this.frame as WebviewTag)
 
-                const pageTitle = pageContent?.title || this.currentGateState.title || 'Web Clip';
-                const siteName = pageContent?.siteName || this.extractSiteName(currentUrl);
+                const pageTitle = pageContent?.title || this.currentGateState.title || 'Web Clip'
+                const siteName = pageContent?.siteName || this.extractSiteName(currentUrl)
 
                 // 현재 날짜와 시간
-                const now = new Date();
-                const dateStr = now.toISOString().split('T')[0]; // YYYY-MM-DD
-                const timeStr = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }); // HH:MM
-                const fullDateTime = `${dateStr} ${timeStr}`;
+                const now = new Date()
+                const dateStr = now.toISOString().split('T')[0] // YYYY-MM-DD
+                const timeStr = now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) // HH:MM
+                const fullDateTime = `${dateStr} ${timeStr}`
 
                 // 파일명 생성 (제목 기반, 특수문자 제거)
-                const sanitizedTitle = pageTitle.replace(/[\\/:*?"<>|]/g, '-').substring(0, 50);
-                let fileName = `${sanitizedTitle} - ${dateStr}.md`;
+                const sanitizedTitle = pageTitle.replace(/[\\/:*?"<>|]/g, '-').substring(0, 50)
+                let fileName = `${sanitizedTitle} - ${dateStr}.md`
 
                 // 중복 파일 체크 및 고유 파일명 생성
-                fileName = await this.getUniqueFileName(fileName);
+                fileName = await this.getUniqueFileName(fileName)
 
                 // YAML Frontmatter 생성
                 const yamlFrontmatter = `---
@@ -1217,7 +1189,7 @@ tags:
   - easy-gate
 ---
 
-`;
+`
 
                 // 전체 노트 내용 생성: YAML + 제목 + 구분선 + 내용
                 const noteContent = `${yamlFrontmatter}# ${pageTitle}
@@ -1228,37 +1200,37 @@ tags:
 ---
 
 ${formattedText}
-`;
+`
 
-                const file = await this.plugin.app.vault.create(fileName, noteContent);
-                await this.plugin.app.workspace.getLeaf('tab').openFile(file);
-                new Notice(`Created new note: ${fileName}`);
+                const file = await this.plugin.app.vault.create(fileName, noteContent)
+                await this.plugin.app.workspace.getLeaf('tab').openFile(file)
+                new Notice(`Created new note: ${fileName}`)
             } catch (error) {
-                console.error('Error creating note with metadata:', error);
+                console.error('Error creating note with metadata:', error)
                 // Fallback: 메타데이터 없이 기본 노트 생성
-                const baseFileName = `Note ${new Date().toISOString().slice(0, 19).replace(/T|:/g, '-')}.md`;
-                const fileName = await this.getUniqueFileName(baseFileName);
-                const file = await this.plugin.app.vault.create(fileName, formattedText);
-                await this.plugin.app.workspace.getLeaf('tab').openFile(file);
-                new Notice('Created new note with text.');
+                const baseFileName = `Note ${new Date().toISOString().slice(0, 19).replace(/T|:/g, '-')}.md`
+                const fileName = await this.getUniqueFileName(baseFileName)
+                const file = await this.plugin.app.vault.create(fileName, formattedText)
+                await this.plugin.app.workspace.getLeaf('tab').openFile(file)
+                new Notice('Created new note with text.')
             }
-            return;
+            return
         }
 
         if (!activeView) {
-            new Notice('No active Markdown note found to insert text.');
-            return;
+            new Notice('No active Markdown note found to insert text.')
+            return
         }
 
-        const editor = activeView.editor;
+        const editor = activeView.editor
         if (this.insertMode === 'cursor') {
-            editor.replaceSelection(formattedText);
+            editor.replaceSelection(formattedText)
         } else if (this.insertMode === 'bottom') {
-            const lastLine = editor.lineCount();
-            editor.replaceRange('\n\n' + formattedText, { line: lastLine, ch: 0 });
+            const lastLine = editor.lineCount()
+            editor.replaceRange('\n\n' + formattedText, { line: lastLine, ch: 0 })
         }
 
-        new Notice('Text applied!');
+        new Notice('Text applied!')
     }
 
     /**
@@ -1269,43 +1241,43 @@ ${formattedText}
      */
     private formatTextAsMarkdown(text: string): string {
         // 기본 정리: 연속 줄바꿈 정규화
-        const formatted = text.trim();
+        const formatted = text.trim()
 
         // 줄 단위로 분리하여 처리
-        const lines = formatted.split('\n');
-        const processedLines: string[] = [];
+        const lines = formatted.split('\n')
+        const processedLines: string[] = []
 
         for (let i = 0; i < lines.length; i++) {
-            const line = lines[i].trim();
+            const line = lines[i].trim()
 
             if (!line) {
                 // 빈 줄은 문단 구분으로 유지
                 if (processedLines.length > 0 && processedLines[processedLines.length - 1] !== '') {
-                    processedLines.push('');
+                    processedLines.push('')
                 }
-                continue;
+                continue
             }
 
             // 번호 리스트 감지 (1. 2. 3. 또는 1) 2) 3) 형식)
-            const numberedMatch = line.match(/^(\d+)[.)]\s*(.+)$/);
+            const numberedMatch = line.match(/^(\d+)[.)]\s*(.+)$/)
             if (numberedMatch) {
-                processedLines.push(`${numberedMatch[1]}. ${numberedMatch[2]}`);
-                continue;
+                processedLines.push(`${numberedMatch[1]}. ${numberedMatch[2]}`)
+                continue
             }
 
             // 불릿 리스트 감지 (-, *, •, ▪, ▸ 등)
-            const bulletMatch = line.match(/^[-*•▪▸►◦]\s*(.+)$/);
+            const bulletMatch = line.match(/^[-*•▪▸►◦]\s*(.+)$/)
             if (bulletMatch) {
-                processedLines.push(`- ${bulletMatch[1]}`);
-                continue;
+                processedLines.push(`- ${bulletMatch[1]}`)
+                continue
             }
 
             // 일반 텍스트
-            processedLines.push(line);
+            processedLines.push(line)
         }
 
         // 최종 결과: 연속된 빈 줄 제거 후 반환
-        return processedLines.join('\n').replace(/\n{3,}/g, '\n\n');
+        return processedLines.join('\n').replace(/\n{3,}/g, '\n\n')
     }
 
     /**
@@ -1313,32 +1285,32 @@ ${formattedText}
      * 파일이 이미 존재하면 (1), (2), ... 숫자를 붙여 고유하게 만듦
      */
     private async getUniqueFileName(fileName: string): Promise<string> {
-        const baseName = fileName.replace(/\.md$/, '');
-        const extension = '.md';
+        const baseName = fileName.replace(/\.md$/, '')
+        const extension = '.md'
 
         // 파일이 존재하지 않으면 원래 이름 반환
         if (!this.plugin.app.vault.getAbstractFileByPath(fileName)) {
-            return fileName;
+            return fileName
         }
 
         // 파일이 존재하면 숫자를 붙여 고유하게 만듦
-        let counter = 1;
-        let newFileName = `${baseName} (${counter})${extension}`;
+        let counter = 1
+        let newFileName = `${baseName} (${counter})${extension}`
 
         while (this.plugin.app.vault.getAbstractFileByPath(newFileName)) {
-            counter++;
-            newFileName = `${baseName} (${counter})${extension}`;
+            counter++
+            newFileName = `${baseName} (${counter})${extension}`
 
             // 무한 루프 방지 (최대 100개)
             if (counter > 100) {
                 // 타임스탬프로 fallback
-                const timestamp = Date.now();
-                newFileName = `${baseName} - ${timestamp}${extension}`;
-                break;
+                const timestamp = Date.now()
+                newFileName = `${baseName} - ${timestamp}${extension}`
+                break
             }
         }
 
-        return newFileName;
+        return newFileName
     }
 
     private createFrame(): void {
@@ -1357,8 +1329,8 @@ ${formattedText}
 
             // Popup Handling - OAuth URL은 같은 webview에서, 일반 URL은 모달로 처리
             this.newWindowListener = (e: Event) => {
-                const url = (e as any).url as string;
-                if (!url) return;
+                const url = (e as any).url as string
+                if (!url) return
 
                 // OAuth 제공자 URL 감지 (Google, Apple, Microsoft, etc.)
                 const oauthDomains = [
@@ -1370,22 +1342,22 @@ ${formattedText}
                     'github.com/login',
                     'api.twitter.com',
                     'facebook.com/dialog',
-                    'facebook.com/v',
-                ];
+                    'facebook.com/v'
+                ]
 
-                const isOAuthUrl = oauthDomains.some(domain => url.includes(domain));
+                const isOAuthUrl = oauthDomains.some((domain) => url.includes(domain))
 
                 if (isOAuthUrl) {
                     // OAuth URL은 동일한 webview에서 직접 로드 (인앱 브라우저 방식)
                     // OAuth 완료 후 자동으로 원래 사이트로 리다이렉트됨
-                    this.navigateTo(url);
-                    return;
+                    this.navigateTo(url)
+                    return
                 }
 
                 // 일반 팝업은 Obsidian 모달로 처리
-                new GatePopupModal(this.plugin.app, url, this.options.profileKey).open();
-            };
-            this.frame.addEventListener('new-window', this.newWindowListener);
+                new GatePopupModal(this.plugin.app, url, this.options.profileKey).open()
+            }
+            this.frame.addEventListener('new-window', this.newWindowListener)
 
             this.destroyedListener = () => {
                 if (this.frameDoc != this.contentEl.doc) {
@@ -1395,7 +1367,7 @@ ${formattedText}
                     this.frameDoc = this.contentEl.doc
                     this.createFrame()
                 }
-            };
+            }
             this.frame.addEventListener('destroyed', this.destroyedListener)
         }
 
@@ -1474,6 +1446,6 @@ ${formattedText}
     }
 
     async setUrl(url: string) {
-        this.navigateTo(url);
+        this.navigateTo(url)
     }
 }

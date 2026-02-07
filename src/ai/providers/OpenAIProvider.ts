@@ -6,12 +6,7 @@
  */
 
 import { BaseProvider } from './BaseProvider'
-import {
-    AIProviderType,
-    AIProviderResponse,
-    AIMessage,
-    AIRequestOptions
-} from '../types'
+import { AIProviderType, AIProviderResponse, AIMessage, AIRequestOptions } from '../types'
 
 interface OpenAIMessage {
     role: 'system' | 'user' | 'assistant'
@@ -66,7 +61,7 @@ export class OpenAIProvider extends BaseProvider {
                 url,
                 method: 'GET',
                 headers: {
-                    'Authorization': `Bearer ${apiKey}`,
+                    Authorization: `Bearer ${apiKey}`,
                     'Content-Type': 'application/json'
                 }
             })
@@ -81,11 +76,7 @@ export class OpenAIProvider extends BaseProvider {
     /**
      * 텍스트 생성
      */
-    async generateText(
-        messages: AIMessage[],
-        apiKey: string,
-        options?: AIRequestOptions
-    ): Promise<AIProviderResponse> {
+    async generateText(messages: AIMessage[], apiKey: string, options?: AIRequestOptions): Promise<AIProviderResponse> {
         const model = options?.model || this.config.defaultModel
         const url = `${this.config.endpoint}/chat/completions`
 
@@ -105,7 +96,7 @@ export class OpenAIProvider extends BaseProvider {
                 url,
                 method: 'POST',
                 headers: {
-                    'Authorization': `Bearer ${apiKey}`,
+                    Authorization: `Bearer ${apiKey}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(requestBody)

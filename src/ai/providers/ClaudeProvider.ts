@@ -6,12 +6,7 @@
  */
 
 import { BaseProvider } from './BaseProvider'
-import {
-    AIProviderType,
-    AIProviderResponse,
-    AIMessage,
-    AIRequestOptions
-} from '../types'
+import { AIProviderType, AIProviderResponse, AIMessage, AIRequestOptions } from '../types'
 
 interface ClaudeMessage {
     role: 'user' | 'assistant'
@@ -85,11 +80,7 @@ export class ClaudeProvider extends BaseProvider {
     /**
      * 텍스트 생성
      */
-    async generateText(
-        messages: AIMessage[],
-        apiKey: string,
-        options?: AIRequestOptions
-    ): Promise<AIProviderResponse> {
+    async generateText(messages: AIMessage[], apiKey: string, options?: AIRequestOptions): Promise<AIProviderResponse> {
         const model = options?.model || this.config.defaultModel
         const url = `${this.config.endpoint}/messages`
 
@@ -145,9 +136,7 @@ export class ClaudeProvider extends BaseProvider {
             return {
                 success: true,
                 content: generatedText,
-                tokensUsed: response.usage
-                    ? response.usage.input_tokens + response.usage.output_tokens
-                    : undefined
+                tokensUsed: response.usage ? response.usage.input_tokens + response.usage.output_tokens : undefined
             }
         } catch (error) {
             return this.handleError(error)

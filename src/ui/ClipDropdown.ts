@@ -47,11 +47,7 @@ export class ClipDropdown {
         const menu = new Menu()
 
         // 헤더: 저장 옵션 안내
-        menu.addItem((item) =>
-            item
-                .setTitle('📥 웹페이지 저장 옵션')
-                .setDisabled(true)
-        )
+        menu.addItem((item) => item.setTitle('📥 웹페이지 저장 옵션').setDisabled(true))
 
         menu.addSeparator()
 
@@ -91,9 +87,7 @@ export class ClipDropdown {
         const recentNotes = this.getRecentClippingNotes()
         if (recentNotes.length > 0) {
             menu.addSeparator()
-            menu.addItem((item) =>
-                item.setTitle('최근 클리핑').setDisabled(true)
-            )
+            menu.addItem((item) => item.setTitle('최근 클리핑').setDisabled(true))
 
             recentNotes.forEach((file) => {
                 menu.addItem((item) =>
@@ -151,14 +145,10 @@ export class ClipDropdown {
             })
 
             if (files.length > 15) {
-                menu.addItem((item) =>
-                    item.setTitle(`... ${files.length - 15}개 더`).setDisabled(true)
-                )
+                menu.addItem((item) => item.setTitle(`... ${files.length - 15}개 더`).setDisabled(true))
             }
         } else {
-            menu.addItem((item) =>
-                item.setTitle('클리핑 폴더가 없습니다').setDisabled(true)
-            )
+            menu.addItem((item) => item.setTitle('클리핑 폴더가 없습니다').setDisabled(true))
         }
 
         menu.showAtMouseEvent(new MouseEvent('click'))
@@ -208,11 +198,7 @@ export class ClipDropdown {
  * ClipButton 생성 헬퍼
  * Gate Top Bar에 추가할 클립 버튼을 생성합니다.
  */
-export function createClipButton(
-    container: HTMLElement,
-    dropdown: ClipDropdown,
-    onQuickClip: () => void
-): HTMLElement {
+export function createClipButton(container: HTMLElement, dropdown: ClipDropdown, onQuickClip: () => void): HTMLElement {
     const wrapper = container.createDiv({ cls: 'easy-gate-clip-btn-wrapper' })
 
     // 메인 클립 버튼 (원클릭)
