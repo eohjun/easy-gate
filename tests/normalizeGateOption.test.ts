@@ -9,7 +9,7 @@ describe('normalizeGateOption', () => {
   it('generates id when none is supplied', () => {
     const gate = { url: 'https://example.com' }
     const normalized = normalizeGateOption(clone(gate))
-    expect(normalized.id).toBe(btoa('https://example.com'))
+    expect(normalized.id).toBe(btoa(encodeURIComponent('https://example.com')))
   })
 
   it('applies default profile key and zoom factor', () => {
