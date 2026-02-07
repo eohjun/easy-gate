@@ -145,7 +145,7 @@ export const createFormEditGate = (contentEl: HTMLElement, gateOptions: GateFram
             .setCta()
             .onClick(async () => {
                 gateOptions = normalizeGateOption(gateOptions)
-                onSubmit && onSubmit(gateOptions)
+                if (onSubmit) onSubmit(gateOptions)
             })
     )
 }

@@ -19,7 +19,7 @@ export class GateView extends ItemView {
     private readonly options: GateFrameOption
     private frame: WebviewTag | HTMLIFrameElement
     private readonly useIframe: boolean = false
-    private frameReadyCallbacks: Function[]
+    private frameReadyCallbacks: (() => void)[]
     private isFrameReady: boolean = false
     private frameDoc: Document
     private plugin: OpenGatePlugin
@@ -228,7 +228,7 @@ export class GateView extends ItemView {
         // 설정 탭 열기 (Obsidian 기본 API 사용)
         // @ts-ignore - Obsidian 내부 API
         this.app.setting?.open()
-        // @ts-ignore
+        // @ts-ignore - Obsidian internal setting API
         this.app.setting?.openTabById?.(this.plugin.manifest.id)
     }
 
@@ -739,7 +739,7 @@ ${response.content}
     private extractSiteName(url: string): string {
         try {
             const urlObj = new URL(url)
-            let hostname = urlObj.hostname.replace(/^www\./, '')
+            const hostname = urlObj.hostname.replace(/^www\./, '')
             // 주요 사이트 이름 매핑
             const siteNames: Record<string, string> = {
                 'youtube.com': 'YouTube',
@@ -944,7 +944,7 @@ ${sourceRefs}
         // 설정 탭 열기
         // @ts-ignore - Obsidian 내부 API
         this.app.setting?.open()
-        // @ts-ignore
+        // @ts-ignore - Obsidian internal setting API
         this.app.setting?.openTabById?.(this.plugin.manifest.id)
     }
 
@@ -1269,7 +1269,7 @@ ${formattedText}
      */
     private formatTextAsMarkdown(text: string): string {
         // 기본 정리: 연속 줄바꿈 정규화
-        let formatted = text.trim();
+        const formatted = text.trim();
 
         // 줄 단위로 분리하여 처리
         const lines = formatted.split('\n');
@@ -1465,7 +1465,7 @@ ${formattedText}
         return this.options?.icon ?? 'globe'
     }
 
-    onFrameReady(callback: Function) {
+    onFrameReady(callback: () => void) {
         if (this.isFrameReady) {
             callback()
         } else {

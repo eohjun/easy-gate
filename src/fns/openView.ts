@@ -2,7 +2,7 @@ import { Workspace, WorkspaceLeaf } from 'obsidian'
 import { GateFrameOptionType } from '../GateOptions'
 
 export const openView = async (workspace: Workspace, id: string, position?: GateFrameOptionType): Promise<WorkspaceLeaf> => {
-    let leafs = workspace.getLeavesOfType(id)
+    const leafs = workspace.getLeavesOfType(id)
     if (leafs.length > 0) {
         workspace.revealLeaf(leafs[0])
         return leafs[0]
@@ -18,7 +18,7 @@ export const openView = async (workspace: Workspace, id: string, position?: Gate
 }
 
 export const isViewExist = (workspace: Workspace, id: string): boolean => {
-    let leafs = workspace.getLeavesOfType(id)
+    const leafs = workspace.getLeavesOfType(id)
     return leafs.length > 0
 }
 

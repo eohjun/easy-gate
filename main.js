@@ -83,7 +83,9 @@ var init_types = __esm({
       defaultTemplate: "basic-summary",
       autoTags: true,
       aiNotesFolder: "AI-Notes",
+      // 기본 AI 노트 폴더
       autoOpenNote: true
+      // 기본값: 노트 생성 후 자동 열기
     };
     DEFAULT_CLIPPING_SETTINGS = {
       defaultFolder: "Clippings",
@@ -224,6 +226,9 @@ var init_ContentExtractor = __esm({
 `;
     GET_URL_SCRIPT = `window.location.href`;
     ContentExtractor = class {
+      /**
+       * 전체 페이지 콘텐츠 추출
+       */
       static async extractPageContent(webview) {
         try {
           const result = await webview.executeJavaScript(CONTENT_EXTRACTION_SCRIPT);
@@ -233,6 +238,9 @@ var init_ContentExtractor = __esm({
           return null;
         }
       }
+      /**
+       * 선택된 텍스트 추출
+       */
       static async extractSelection(webview) {
         try {
           const result = await webview.executeJavaScript(SELECTION_EXTRACTION_SCRIPT);
@@ -242,6 +250,9 @@ var init_ContentExtractor = __esm({
           return null;
         }
       }
+      /**
+       * 현재 URL 가져오기
+       */
       static async getCurrentUrl(webview) {
         try {
           return await webview.executeJavaScript(GET_URL_SCRIPT);
@@ -250,12 +261,22 @@ var init_ContentExtractor = __esm({
           return "";
         }
       }
+      /**
+       * 텍스트 정제 유틸리티
+       */
       static cleanText(text) {
         return text.replace(/\s+/g, " ").replace(/\n\s*\n/g, "\n\n").trim();
       }
+      /**
+       * HTML에서 텍스트만 추출
+       */
       static htmlToText(html) {
         return html.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "").replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "").replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/\s+/g, " ").trim();
       }
+      /**
+       * 콘텐츠 길이 계산 (토큰 추정)
+       * 대략적으로 4글자당 1토큰으로 계산
+       */
       static estimateTokens(text) {
         return Math.ceil(text.length / 4);
       }
@@ -363,6 +384,9 @@ var init_MetadataParser = __esm({
 })();
 `;
     MetadataParser = class {
+      /**
+       * 웹뷰에서 메타데이터 추출
+       */
       static async extractMetadata(webview) {
         try {
           const result = await webview.executeJavaScript(METADATA_EXTRACTION_SCRIPT);
@@ -372,6 +396,9 @@ var init_MetadataParser = __esm({
           return null;
         }
       }
+      /**
+       * 메타데이터 정규화
+       */
       static normalizeMetadata(raw) {
         var _a;
         return {
@@ -387,29 +414,41 @@ var init_MetadataParser = __esm({
           language: raw.language || void 0
         };
       }
+      /**
+       * 문자열 정제
+       */
       static cleanString(str) {
-        if (!str)
-          return void 0;
+        if (!str) return void 0;
         return str.trim().replace(/\s+/g, " ");
       }
+      /**
+       * 날짜 정규화 (ISO 형식으로)
+       */
       static normalizeDate(dateStr) {
-        if (!dateStr)
-          return void 0;
+        if (!dateStr) return void 0;
         try {
           const date = new Date(dateStr);
-          if (isNaN(date.getTime()))
-            return dateStr;
+          if (isNaN(date.getTime())) return dateStr;
           return date.toISOString().split("T")[0];
         } catch (e) {
           return dateStr;
         }
       }
+      /**
+       * 현재 날짜를 ISO 형식으로 반환
+       */
       static getCurrentDate() {
-        return new Date().toISOString().split("T")[0];
+        return (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
       }
+      /**
+       * 현재 타임스탬프를 ISO 형식으로 반환
+       */
       static getCurrentTimestamp() {
-        return new Date().toISOString();
+        return (/* @__PURE__ */ new Date()).toISOString();
       }
+      /**
+       * URL에서 도메인 추출
+       */
       static extractDomain(url) {
         try {
           const urlObj = new URL(url);
@@ -418,6 +457,9 @@ var init_MetadataParser = __esm({
           return "";
         }
       }
+      /**
+       * URL 정규화
+       */
       static normalizeUrl(url) {
         try {
           const urlObj = new URL(url);
@@ -453,6 +495,9 @@ var init_NoteGenerator = __esm({
         this.vault = options.vault;
         this.settings = options.settings;
       }
+      /**
+       * 클리핑 데이터로 노트 생성
+       */
       async createNote(clipData) {
         try {
           const filename = this.generateFilename(clipData);
@@ -472,6 +517,9 @@ var init_NoteGenerator = __esm({
           return null;
         }
       }
+      /**
+       * 기존 노트에 클리핑 추가
+       */
       async appendToNote(file, clipData) {
         try {
           const clipBlock = this.generateClipBlock(clipData);
@@ -484,6 +532,9 @@ var init_NoteGenerator = __esm({
           return false;
         }
       }
+      /**
+       * 여러 클리핑을 하나의 노트로 생성
+       */
       async createMultiClipNote(clips, title) {
         try {
           const filename = this.sanitizeFilename(title);
@@ -503,15 +554,24 @@ var init_NoteGenerator = __esm({
           return null;
         }
       }
+      /**
+       * 파일명 생성
+       */
       generateFilename(clipData) {
         var _a;
         let filename = this.settings.filenameFormat;
         filename = filename.replace("{title}", clipData.title || "Untitled").replace("{date}", MetadataParser.getCurrentDate()).replace("{site}", ((_a = clipData.metadata) == null ? void 0 : _a.siteName) || "unknown");
         return this.sanitizeFilename(filename);
       }
+      /**
+       * 파일명 정제 (특수문자 제거)
+       */
       sanitizeFilename(filename) {
         return filename.replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, " ").trim().substring(0, 100);
       }
+      /**
+       * 노트 콘텐츠 생성
+       */
       generateNoteContent(clipData) {
         const parts = [];
         parts.push(this.generateFrontmatter(clipData));
@@ -525,6 +585,9 @@ var init_NoteGenerator = __esm({
         parts.push(this.generateFooter(clipData));
         return parts.join("\n");
       }
+      /**
+       * YAML Frontmatter 생성
+       */
       generateFrontmatter(clipData) {
         var _a, _b;
         const frontmatter = ["---"];
@@ -544,6 +607,9 @@ var init_NoteGenerator = __esm({
         frontmatter.push("");
         return frontmatter.join("\n");
       }
+      /**
+       * 푸터 생성
+       */
       generateFooter(clipData) {
         var _a;
         const parts = [];
@@ -556,6 +622,9 @@ var init_NoteGenerator = __esm({
         parts.push(`*\uD074\uB9AC\uD551 \uB0A0\uC9DC: ${clipData.clippedAt.split("T")[0]}*`);
         return parts.join(" | ");
       }
+      /**
+       * gate-clip 코드블록 생성
+       */
       generateClipBlock(clipData) {
         var _a, _b;
         const lines = ["```gate-clip"];
@@ -576,6 +645,9 @@ var init_NoteGenerator = __esm({
         lines.push("```");
         return lines.join("\n");
       }
+      /**
+       * 여러 클리핑 노트 콘텐츠 생성
+       */
       generateMultiClipContent(clips, title) {
         const parts = [];
         parts.push(`# ${title}`);
@@ -594,6 +666,9 @@ var init_NoteGenerator = __esm({
         parts.push(`*\uC0DD\uC131\uC77C: ${MetadataParser.getCurrentDate()}*`);
         return parts.join("\n");
       }
+      /**
+       * 폴더 존재 확인 및 생성
+       */
       async ensureFolder(folderPath) {
         const folder = this.vault.getAbstractFileByPath(folderPath);
         if (!folder) {
@@ -602,6 +677,9 @@ var init_NoteGenerator = __esm({
           throw new Error(`${folderPath} exists but is not a folder`);
         }
       }
+      /**
+       * 고유 파일명 생성 (중복 시 번호 추가)
+       */
       async getUniqueFilePath(basePath) {
         let path = basePath;
         let counter = 1;
@@ -652,6 +730,9 @@ var init_ClipService = __esm({
           settings: this.settings
         });
       }
+      /**
+       * 설정 업데이트
+       */
       updateSettings(settings) {
         this.settings = settings;
         this.noteGenerator = new NoteGenerator({
@@ -659,6 +740,9 @@ var init_ClipService = __esm({
           settings: this.settings
         });
       }
+      /**
+       * 원클릭 클리핑 - 전체 페이지
+       */
       async clipPage(webview, gateId) {
         try {
           const content = await ContentExtractor.extractPageContent(webview);
@@ -677,6 +761,9 @@ var init_ClipService = __esm({
           return { success: false, error: errorMessage };
         }
       }
+      /**
+       * 선택 텍스트 클리핑
+       */
       async clipSelection(webview, gateId) {
         try {
           const selection = await ContentExtractor.extractSelection(webview);
@@ -710,6 +797,9 @@ var init_ClipService = __esm({
           return { success: false, error: errorMessage };
         }
       }
+      /**
+       * 기존 노트에 클리핑 추가
+       */
       async clipToNote(webview, gateId, targetFile) {
         try {
           const content = await ContentExtractor.extractPageContent(webview);
@@ -732,11 +822,13 @@ var init_ClipService = __esm({
           return { success: false, error: errorMessage };
         }
       }
+      /**
+       * 데이터만 추출 (노트 생성 없이)
+       */
       async extractOnly(webview, gateId) {
         try {
           const content = await ContentExtractor.extractPageContent(webview);
-          if (!content)
-            return null;
+          if (!content) return null;
           const metadata = await MetadataParser.extractMetadata(webview);
           return this.createClipData(content, metadata, gateId);
         } catch (error) {
@@ -744,11 +836,13 @@ var init_ClipService = __esm({
           return null;
         }
       }
+      /**
+       * 선택 텍스트만 추출
+       */
       async extractSelectionOnly(webview, gateId) {
         try {
           const selection = await ContentExtractor.extractSelection(webview);
-          if (!selection || !selection.hasSelection)
-            return null;
+          if (!selection || !selection.hasSelection) return null;
           const metadata = await MetadataParser.extractMetadata(webview);
           const url = await ContentExtractor.getCurrentUrl(webview);
           return {
@@ -772,6 +866,9 @@ var init_ClipService = __esm({
           return null;
         }
       }
+      /**
+       * ClipData 생성 헬퍼
+       */
       createClipData(content, metadata, gateId) {
         return {
           id: generateClipId(),
@@ -790,9 +887,15 @@ var init_ClipService = __esm({
           gateId
         };
       }
+      /**
+       * 토큰 추정
+       */
       estimateTokens(text) {
         return ContentExtractor.estimateTokens(text);
       }
+      /**
+       * 콘텐츠 길이 정보
+       */
       getContentStats(content) {
         const chars = content.length;
         const words = content.split(/\s+/).filter((w) => w).length;
@@ -880,76 +983,100 @@ var normalizeGateOption = (gate) => {
 
 // src/fns/createFormEditGate.ts
 var createFormEditGate = (contentEl, gateOptions, onSubmit) => {
-  new import_obsidian.Setting(contentEl).setName("URL").setClass("open-gate--form-field").addText((text) => text.setPlaceholder("https://example.com").setValue(gateOptions.url).onChange(async (value) => {
-    gateOptions.url = value;
-  }));
-  new import_obsidian.Setting(contentEl).setName("Name").setClass("open-gate--form-field").addText((text) => text.setValue(gateOptions.title).onChange(async (value) => {
-    gateOptions.title = value;
-  }));
-  new import_obsidian.Setting(contentEl).setName("Pin to menu").setClass("open-gate--form-field").setDesc("If enabled, the gate will be pinned to the left bar").addToggle((text) => text.setValue(gateOptions.hasRibbon === true).onChange(async (value) => {
-    gateOptions.hasRibbon = value;
-  }));
-  new import_obsidian.Setting(contentEl).setName("Position").setClass("open-gate--form-field").setDesc("What banner do you want to show?").addDropdown((text) => {
-    var _a;
-    return text.addOption("left", "Left").addOption("right", "Right").addOption("center", "Center").setValue((_a = gateOptions.position) != null ? _a : "right").onChange(async (value) => {
-      gateOptions.position = value;
-    });
-  });
-  new import_obsidian.Setting(contentEl).setName("Advanced Options").setClass("open-gate--form-field").addToggle((text) => text.setValue(false).onChange(async (value) => {
-    if (value) {
-      advancedOptions.addClass("open-gate--advanced-options--show");
-    } else {
-      advancedOptions.removeClass("open-gate--advanced-options--show");
+  new import_obsidian.Setting(contentEl).setName("URL").setClass("open-gate--form-field").addText(
+    (text) => text.setPlaceholder("https://example.com").setValue(gateOptions.url).onChange(async (value) => {
+      gateOptions.url = value;
+    })
+  );
+  new import_obsidian.Setting(contentEl).setName("Name").setClass("open-gate--form-field").addText(
+    (text) => text.setValue(gateOptions.title).onChange(async (value) => {
+      gateOptions.title = value;
+    })
+  );
+  new import_obsidian.Setting(contentEl).setName("Pin to menu").setClass("open-gate--form-field").setDesc("If enabled, the gate will be pinned to the left bar").addToggle(
+    (text) => text.setValue(gateOptions.hasRibbon === true).onChange(async (value) => {
+      gateOptions.hasRibbon = value;
+    })
+  );
+  new import_obsidian.Setting(contentEl).setName("Position").setClass("open-gate--form-field").setDesc("What banner do you want to show?").addDropdown(
+    (text) => {
+      var _a;
+      return text.addOption("left", "Left").addOption("right", "Right").addOption("center", "Center").setValue((_a = gateOptions.position) != null ? _a : "right").onChange(async (value) => {
+        gateOptions.position = value;
+      });
     }
-  }));
+  );
+  new import_obsidian.Setting(contentEl).setName("Advanced Options").setClass("open-gate--form-field").addToggle(
+    (text) => text.setValue(false).onChange(async (value) => {
+      if (value) {
+        advancedOptions.addClass("open-gate--advanced-options--show");
+      } else {
+        advancedOptions.removeClass("open-gate--advanced-options--show");
+      }
+    })
+  );
   const advancedOptions = contentEl.createDiv({
     cls: "open-gate--advanced-options"
   });
-  new import_obsidian.Setting(advancedOptions).setName("Icon").setClass("open-gate--form-field--column").setDesc("Leave it blank to enable auto-detect").addTextArea((text) => text.setValue(gateOptions.icon).onChange(async (value) => {
-    gateOptions.icon = value;
-  }));
-  new import_obsidian.Setting(advancedOptions).setName("User Agent").setClass("open-gate--form-field--column").setDesc("Leave it blank if you are not sure").addTextArea((text) => {
-    var _a;
-    return text.setValue((_a = gateOptions.userAgent) != null ? _a : "").onChange(async (value) => {
-      gateOptions.userAgent = value;
-    });
-  });
-  new import_obsidian.Setting(advancedOptions).setName("Profile Key").setClass("open-gate--form-field").setDesc("It's like profiles in Chrome, gates with the same profile can share storage").addText((text) => {
-    var _a;
-    return text.setValue((_a = gateOptions.profileKey) != null ? _a : "").onChange(async (value) => {
-      if (value === "") {
-        value = "open-gate";
-      }
-      gateOptions.profileKey = value;
-    });
-  });
-  new import_obsidian.Setting(advancedOptions).setName("Zoom Factor").setClass("open-gate--form-field").setDesc("Leave it blank if you are not sure").addText((text) => {
-    var _a, _b;
-    return text.setValue((_b = (_a = gateOptions.zoomFactor) == null ? void 0 : _a.toString()) != null ? _b : "0.0").onChange(async (value) => {
-      gateOptions.zoomFactor = parseFloat(value);
-    });
-  });
+  new import_obsidian.Setting(advancedOptions).setName("Icon").setClass("open-gate--form-field--column").setDesc("Leave it blank to enable auto-detect").addTextArea(
+    (text) => text.setValue(gateOptions.icon).onChange(async (value) => {
+      gateOptions.icon = value;
+    })
+  );
+  new import_obsidian.Setting(advancedOptions).setName("User Agent").setClass("open-gate--form-field--column").setDesc("Leave it blank if you are not sure").addTextArea(
+    (text) => {
+      var _a;
+      return text.setValue((_a = gateOptions.userAgent) != null ? _a : "").onChange(async (value) => {
+        gateOptions.userAgent = value;
+      });
+    }
+  );
+  new import_obsidian.Setting(advancedOptions).setName("Profile Key").setClass("open-gate--form-field").setDesc("It's like profiles in Chrome, gates with the same profile can share storage").addText(
+    (text) => {
+      var _a;
+      return text.setValue((_a = gateOptions.profileKey) != null ? _a : "").onChange(async (value) => {
+        if (value === "") {
+          value = "open-gate";
+        }
+        gateOptions.profileKey = value;
+      });
+    }
+  );
+  new import_obsidian.Setting(advancedOptions).setName("Zoom Factor").setClass("open-gate--form-field").setDesc("Leave it blank if you are not sure").addText(
+    (text) => {
+      var _a, _b;
+      return text.setValue((_b = (_a = gateOptions.zoomFactor) == null ? void 0 : _a.toString()) != null ? _b : "0.0").onChange(async (value) => {
+        gateOptions.zoomFactor = parseFloat(value);
+      });
+    }
+  );
   const cssFieldDesc = new DocumentFragment();
   const descLink = document.createElement("a");
   descLink.href = "https://github.com/nguyenvanduocit/obsidian-open-gate/discussions/categories/snippets";
   descLink.textContent = "Check out the snippet library here";
   cssFieldDesc.appendChild(descLink);
-  new import_obsidian.Setting(advancedOptions).setName("CSS").setClass("open-gate--form-field--column").setDesc(cssFieldDesc).addTextArea((text) => {
-    var _a;
-    return text.setValue((_a = gateOptions.css) != null ? _a : "").onChange(async (value) => {
-      gateOptions.css = value;
-    });
-  });
-  new import_obsidian.Setting(advancedOptions).setName("JavaScript").setClass("open-gate--form-field--column").setDesc("Leave it blank if you are not sure").addTextArea((text) => {
-    var _a;
-    return text.setValue((_a = gateOptions.js) != null ? _a : "").onChange(async (value) => {
-      gateOptions.js = value;
-    });
-  });
-  new import_obsidian.Setting(contentEl).addButton((btn) => btn.setButtonText(gateOptions.id ? "Update the gate" : "Create new gate").setCta().onClick(async () => {
-    gateOptions = normalizeGateOption(gateOptions);
-    onSubmit && onSubmit(gateOptions);
-  }));
+  new import_obsidian.Setting(advancedOptions).setName("CSS").setClass("open-gate--form-field--column").setDesc(cssFieldDesc).addTextArea(
+    (text) => {
+      var _a;
+      return text.setValue((_a = gateOptions.css) != null ? _a : "").onChange(async (value) => {
+        gateOptions.css = value;
+      });
+    }
+  );
+  new import_obsidian.Setting(advancedOptions).setName("JavaScript").setClass("open-gate--form-field--column").setDesc("Leave it blank if you are not sure").addTextArea(
+    (text) => {
+      var _a;
+      return text.setValue((_a = gateOptions.js) != null ? _a : "").onChange(async (value) => {
+        gateOptions.js = value;
+      });
+    }
+  );
+  new import_obsidian.Setting(contentEl).addButton(
+    (btn) => btn.setButtonText(gateOptions.id ? "Update the gate" : "Create new gate").setCta().onClick(async () => {
+      gateOptions = normalizeGateOption(gateOptions);
+      if (onSubmit) onSubmit(gateOptions);
+    })
+  );
 };
 
 // src/ModalEditGate.ts
@@ -1009,11 +1136,16 @@ var BaseProvider = class {
   get config() {
     return AI_PROVIDERS[this.id];
   }
+  /**
+   * HTTP 요청 헬퍼 (Obsidian의 requestUrl 사용)
+   */
   async makeRequest(_url, options, timeoutMs = 15e3) {
     try {
       const response = await Promise.race([
         (0, import_obsidian3.requestUrl)(options),
-        new Promise((_, reject) => setTimeout(() => reject(new Error("Request timed out")), timeoutMs))
+        new Promise(
+          (_, reject) => setTimeout(() => reject(new Error("Request timed out")), timeoutMs)
+        )
       ]);
       return response.json;
     } catch (error) {
@@ -1023,6 +1155,9 @@ var BaseProvider = class {
       throw error;
     }
   }
+  /**
+   * 공통 에러 핸들링
+   */
   handleError(error) {
     let errorMessage = "Unknown error occurred";
     if (error instanceof Error) {
@@ -1061,6 +1196,9 @@ var BaseProvider = class {
       errorCode: "UNKNOWN"
     };
   }
+  /**
+   * 토큰 수 추정 (간단한 추정)
+   */
   estimateTokens(text) {
     const hasKorean = /[ㄱ-ㅎ|ㅏ-ㅣ|가-힣]/.test(text);
     const multiplier = hasKorean ? 1.5 : 1;
@@ -1075,6 +1213,9 @@ var GeminiProvider = class extends BaseProvider {
     this.id = "gemini";
     this.name = "Google Gemini";
   }
+  /**
+   * API 키 유효성 테스트
+   */
   async testApiKey(apiKey) {
     try {
       const model = this.config.defaultModel;
@@ -1095,6 +1236,9 @@ var GeminiProvider = class extends BaseProvider {
       return false;
     }
   }
+  /**
+   * 텍스트 생성
+   */
   async generateText(messages, apiKey, options) {
     var _a, _b, _c;
     const model = (options == null ? void 0 : options.model) || this.config.defaultModel;
@@ -1148,6 +1292,9 @@ var GeminiProvider = class extends BaseProvider {
       return this.handleError(error);
     }
   }
+  /**
+   * 메시지를 Gemini 형식으로 변환
+   */
   convertMessages(messages) {
     const contents = [];
     let systemInstruction = null;
@@ -1172,6 +1319,9 @@ var GrokProvider = class extends BaseProvider {
     this.id = "grok";
     this.name = "xAI Grok";
   }
+  /**
+   * API 키 유효성 테스트
+   */
   async testApiKey(apiKey) {
     try {
       const url = `${this.config.endpoint}/models`;
@@ -1189,6 +1339,9 @@ var GrokProvider = class extends BaseProvider {
       return false;
     }
   }
+  /**
+   * 텍스트 생성
+   */
   async generateText(messages, apiKey, options) {
     var _a, _b, _c;
     const model = (options == null ? void 0 : options.model) || this.config.defaultModel;
@@ -1248,6 +1401,9 @@ var ClaudeProvider = class extends BaseProvider {
     this.name = "Anthropic Claude";
     this.API_VERSION = "2023-06-01";
   }
+  /**
+   * API 키 유효성 테스트
+   */
   async testApiKey(apiKey) {
     try {
       const url = `${this.config.endpoint}/messages`;
@@ -1271,6 +1427,9 @@ var ClaudeProvider = class extends BaseProvider {
       return false;
     }
   }
+  /**
+   * 텍스트 생성
+   */
   async generateText(messages, apiKey, options) {
     var _a, _b;
     const model = (options == null ? void 0 : options.model) || this.config.defaultModel;
@@ -1321,6 +1480,9 @@ var ClaudeProvider = class extends BaseProvider {
       return this.handleError(error);
     }
   }
+  /**
+   * 메시지를 Claude 형식으로 변환
+   */
   convertMessages(messages) {
     const claudeMessages = [];
     let systemPrompt = null;
@@ -1345,6 +1507,9 @@ var OpenAIProvider = class extends BaseProvider {
     this.id = "openai";
     this.name = "OpenAI";
   }
+  /**
+   * API 키 유효성 테스트
+   */
   async testApiKey(apiKey) {
     try {
       const url = `${this.config.endpoint}/models`;
@@ -1362,6 +1527,9 @@ var OpenAIProvider = class extends BaseProvider {
       return false;
     }
   }
+  /**
+   * 텍스트 생성
+   */
   async generateText(messages, apiKey, options) {
     var _a, _b, _c;
     const model = (options == null ? void 0 : options.model) || this.config.defaultModel;
@@ -1420,6 +1588,10 @@ var GLMProvider = class extends BaseProvider {
     this.id = "glm";
     this.name = "Zhipu AI (GLM)";
   }
+  /**
+   * JWT 토큰 생성 (GLM API 인증용)
+   * GLM API는 API 키를 JWT 토큰으로 변환하여 사용
+   */
   generateToken(apiKey) {
     if (apiKey.includes(".")) {
       return apiKey;
@@ -1436,6 +1608,7 @@ var GLMProvider = class extends BaseProvider {
     const payload = this.base64UrlEncode(JSON.stringify({
       api_key: id,
       exp: now + 3600,
+      // 1시간 유효
       timestamp: now * 1e3
     }));
     const signature = this.base64UrlEncode(secret);
@@ -1445,6 +1618,9 @@ var GLMProvider = class extends BaseProvider {
     const base64 = btoa(unescape(encodeURIComponent(str)));
     return base64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   }
+  /**
+   * API 키 유효성 테스트
+   */
   async testApiKey(apiKey) {
     try {
       const url = `${this.config.endpoint}/chat/completions`;
@@ -1468,6 +1644,9 @@ var GLMProvider = class extends BaseProvider {
       return false;
     }
   }
+  /**
+   * 텍스트 생성
+   */
   async generateText(messages, apiKey, options) {
     var _a, _b, _c;
     const model = (options == null ? void 0 : options.model) || this.config.defaultModel;
@@ -1527,6 +1706,9 @@ var AIService = class {
     this.settings = settings;
     this.initializeProviders();
   }
+  /**
+   * 모든 프로바이더 인스턴스 초기화
+   */
   initializeProviders() {
     this.providers.set("gemini", new GeminiProvider());
     this.providers.set("grok", new GrokProvider());
@@ -1534,31 +1716,55 @@ var AIService = class {
     this.providers.set("openai", new OpenAIProvider());
     this.providers.set("glm", new GLMProvider());
   }
+  /**
+   * 설정 업데이트
+   */
   updateSettings(settings) {
     this.settings = settings;
   }
+  /**
+   * 현재 선택된 프로바이더 가져오기
+   */
   getCurrentProvider() {
     return this.providers.get(this.settings.provider);
   }
+  /**
+   * 특정 프로바이더 가져오기
+   */
   getProvider(providerId) {
     return this.providers.get(providerId);
   }
+  /**
+   * 모든 프로바이더 설정 정보 가져오기
+   */
   getAllProviderConfigs() {
     return Object.values(AI_PROVIDERS);
   }
+  /**
+   * API 키가 설정된 프로바이더 목록 반환
+   */
   getConfiguredProviders() {
     return Object.entries(this.settings.apiKeys).filter(([_, key]) => key && key.trim().length > 0).map(([id]) => id);
   }
+  /**
+   * 특정 프로바이더의 API 키가 설정되어 있는지 확인
+   */
   isProviderConfigured(providerId) {
     const apiKey = this.settings.apiKeys[providerId];
     return !!apiKey && apiKey.trim().length > 0;
   }
+  /**
+   * 프로바이더의 현재 모델명 반환
+   */
   getModelForProvider(providerId) {
     if (this.settings.useCustomModel && this.settings.provider === providerId) {
       return this.settings.customModel || this.settings.models[providerId];
     }
     return this.settings.models[providerId];
   }
+  /**
+   * API 키 테스트
+   */
   async testApiKey(providerId, apiKey) {
     const provider = this.providers.get(providerId);
     if (!provider) {
@@ -1572,6 +1778,9 @@ var AIService = class {
       return { success: false, error: errorMessage };
     }
   }
+  /**
+   * 텍스트 생성 (현재 선택된 프로바이더 사용)
+   */
   async generateText(messages, options) {
     const provider = this.getCurrentProvider();
     if (!provider) {
@@ -1604,6 +1813,9 @@ var AIService = class {
       };
     }
   }
+  /**
+   * 특정 프로바이더로 텍스트 생성
+   */
   async generateTextWithProvider(providerId, messages, options) {
     const provider = this.providers.get(providerId);
     if (!provider) {
@@ -1636,6 +1848,9 @@ var AIService = class {
       };
     }
   }
+  /**
+   * 간단한 프롬프트로 텍스트 생성 (헬퍼 메서드)
+   */
   async simpleGenerate(userPrompt, systemPrompt, options) {
     const messages = [];
     if (systemPrompt) {
@@ -1644,6 +1859,9 @@ var AIService = class {
     messages.push({ role: "user", content: userPrompt });
     return this.generateText(messages, options);
   }
+  /**
+   * 웹 콘텐츠 요약용 헬퍼 메서드
+   */
   async summarizeContent(content, language = "\uD55C\uAD6D\uC5B4", options) {
     const systemPrompt = `You are a helpful assistant that summarizes web content.
 Always respond in ${language}.
@@ -1653,6 +1871,9 @@ Provide clear, concise summaries that capture the key points.`;
 ${content}`;
     return this.simpleGenerate(userPrompt, systemPrompt, options);
   }
+  /**
+   * 프로바이더 상태 정보 반환 (UI 표시용)
+   */
   getProviderStatus(providerId) {
     const config = AI_PROVIDERS[providerId];
     return {
@@ -1664,8 +1885,13 @@ ${content}`;
       isDefault: this.settings.provider === providerId
     };
   }
+  /**
+   * 모든 프로바이더 상태 정보 반환
+   */
   getAllProviderStatus() {
-    return Object.keys(AI_PROVIDERS).map((id) => this.getProviderStatus(id));
+    return Object.keys(AI_PROVIDERS).map(
+      (id) => this.getProviderStatus(id)
+    );
   }
 };
 var aiServiceInstance = null;
@@ -1759,6 +1985,9 @@ var SettingTab = class extends import_obsidian4.PluginSettingTab {
       });
     });
   }
+  /**
+   * AI 설정 섹션 렌더링
+   */
   displayAISettings(containerEl) {
     containerEl.createEl("h2", { text: "\u{1F916} AI Settings" });
     this.displayAPIKeySection(containerEl);
@@ -1768,6 +1997,9 @@ var SettingTab = class extends import_obsidian4.PluginSettingTab {
     this.displayAIGenerationSettings(containerEl);
     this.displaySavedPromptsSection(containerEl);
   }
+  /**
+   * API 키 관리 테이블
+   */
   displayAPIKeySection(containerEl) {
     containerEl.createEl("h3", { text: "\u{1F511} AI API \uD0A4 \uAD00\uB9AC" });
     const infoEl = containerEl.createEl("div", { cls: "setting-item-description" });
@@ -1838,7 +2070,10 @@ var SettingTab = class extends import_obsidian4.PluginSettingTab {
       });
       settingEl.addExtraButton((button) => {
         button.setIcon("pencil").setTooltip("\uBAA8\uB378 \uBCC0\uACBD").onClick(async () => {
-          const newModel = prompt(`${providerConfig.displayName} \uBAA8\uB378\uBA85\uC744 \uC785\uB825\uD558\uC138\uC694:`, currentModel);
+          const newModel = prompt(
+            `${providerConfig.displayName} \uBAA8\uB378\uBA85\uC744 \uC785\uB825\uD558\uC138\uC694:`,
+            currentModel
+          );
           if (newModel && newModel.trim().length > 0) {
             this.plugin.settings.ai.models[providerId] = newModel.trim();
             await this.plugin.saveSettings();
@@ -1859,9 +2094,14 @@ var SettingTab = class extends import_obsidian4.PluginSettingTab {
       }
     }
   }
+  /**
+   * 기본 Provider 선택
+   */
   displayDefaultProviderSection(containerEl) {
     containerEl.createEl("h3", { text: "\u{1F3AF} \uAE30\uBCF8 AI Provider \uC120\uD0DD" });
-    const configuredProviders = Object.keys(AI_PROVIDERS).filter((id) => this.plugin.settings.ai.apiKeys[id] && this.plugin.settings.ai.apiKeys[id].trim().length > 0);
+    const configuredProviders = Object.keys(AI_PROVIDERS).filter(
+      (id) => this.plugin.settings.ai.apiKeys[id] && this.plugin.settings.ai.apiKeys[id].trim().length > 0
+    );
     if (configuredProviders.length > 0) {
       const statusEl = containerEl.createEl("div", { cls: "setting-item-description" });
       statusEl.style.cssText = "margin-bottom: 12px; padding: 8px 12px; background: var(--background-modifier-success); border-radius: 6px; color: var(--text-success);";
@@ -1899,6 +2139,9 @@ var SettingTab = class extends import_obsidian4.PluginSettingTab {
       }
     });
   }
+  /**
+   * 커스텀 모델 설정
+   */
   displayCustomModelSection(containerEl) {
     containerEl.createEl("h3", { text: "\u2699\uFE0F \uCEE4\uC2A4\uD140 \uBAA8\uB378 \uC124\uC815 (\uC120\uD0DD\uC0AC\uD56D)" });
     new import_obsidian4.Setting(containerEl).setName("\uCEE4\uC2A4\uD140 \uBAA8\uB378\uBA85 \uC0AC\uC6A9").setDesc("\uAE30\uBCF8 Provider\uC758 \uBAA8\uB378\uBA85\uC744 \uC9C1\uC811 \uC9C0\uC815\uD569\uB2C8\uB2E4.").addToggle((toggle) => {
@@ -1920,6 +2163,9 @@ var SettingTab = class extends import_obsidian4.PluginSettingTab {
       });
     }
   }
+  /**
+   * 클리핑 기본 설정
+   */
   displayClippingSettings(containerEl) {
     containerEl.createEl("h3", { text: "\u{1F4CB} \uD074\uB9AC\uD551 \uAE30\uBCF8 \uC124\uC815" });
     new import_obsidian4.Setting(containerEl).setName("\uAE30\uBCF8 \uC800\uC7A5 \uD3F4\uB354").setDesc("\uD074\uB9AC\uD551 \uB178\uD2B8\uAC00 \uC800\uC7A5\uB420 \uAE30\uBCF8 \uD3F4\uB354\uC785\uB2C8\uB2E4.").addText((text) => {
@@ -1961,6 +2207,9 @@ var SettingTab = class extends import_obsidian4.PluginSettingTab {
       });
     });
   }
+  /**
+   * AI 생성 설정
+   */
   displayAIGenerationSettings(containerEl) {
     containerEl.createEl("h3", { text: "\u2728 AI \uC0DD\uC131 \uC124\uC815" });
     new import_obsidian4.Setting(containerEl).setName("\uAE30\uBCF8 \uC5B8\uC5B4").setDesc("AI\uAC00 \uC751\uB2F5\uD560 \uB54C \uC0AC\uC6A9\uD560 \uAE30\uBCF8 \uC5B8\uC5B4\uC785\uB2C8\uB2E4.").addDropdown((dropdown) => {
@@ -1993,6 +2242,9 @@ var SettingTab = class extends import_obsidian4.PluginSettingTab {
       });
     });
   }
+  /**
+   * 저장된 프롬프트 관리
+   */
   displaySavedPromptsSection(containerEl) {
     containerEl.createEl("h3", { text: "\u{1F4BE} \uC800\uC7A5\uB41C \uD504\uB86C\uD504\uD2B8" });
     const promptsContainer = containerEl.createDiv("saved-prompts-container");
@@ -2023,14 +2275,15 @@ var SettingTab = class extends import_obsidian4.PluginSettingTab {
       });
     });
   }
+  /**
+   * 프롬프트 편집
+   */
   async editPrompt(index) {
     const prompt2 = this.plugin.settings.savedPrompts[index];
     const newName = window.prompt("\uD504\uB86C\uD504\uD2B8 \uC774\uB984:", prompt2.name);
-    if (newName === null)
-      return;
+    if (newName === null) return;
     const newPromptText = window.prompt("\uD504\uB86C\uD504\uD2B8 \uB0B4\uC6A9:", prompt2.prompt);
-    if (newPromptText === null)
-      return;
+    if (newPromptText === null) return;
     this.plugin.settings.savedPrompts[index] = {
       ...prompt2,
       name: newName.trim() || prompt2.name,
@@ -2039,13 +2292,14 @@ var SettingTab = class extends import_obsidian4.PluginSettingTab {
     await this.plugin.saveSettings();
     this.display();
   }
+  /**
+   * 새 프롬프트 추가
+   */
   async addNewPrompt() {
     const name = window.prompt("\uC0C8 \uD504\uB86C\uD504\uD2B8 \uC774\uB984:");
-    if (!name || name.trim().length === 0)
-      return;
+    if (!name || name.trim().length === 0) return;
     const promptText = window.prompt("\uD504\uB86C\uD504\uD2B8 \uB0B4\uC6A9:");
-    if (!promptText || promptText.trim().length === 0)
-      return;
+    if (!promptText || promptText.trim().length === 0) return;
     const newPrompt = {
       id: `prompt-${Date.now()}`,
       name: name.trim(),
@@ -2146,6 +2400,7 @@ var GatePopupModal = class extends import_obsidian5.Modal {
       title: "Popup",
       icon: "globe",
       url: this.url,
+      // OAuth 인증을 위해 부모 게이트와 동일한 profileKey 사용
       profileKey: this.profileKey
     };
     if (import_obsidian6.Platform.isMobileApp) {
@@ -2186,6 +2441,9 @@ var ToastNotification = class {
     this.notice = null;
     this.element = null;
   }
+  /**
+   * 토스트 표시
+   */
   show(message, options = {}) {
     const { type = "info", duration = 3e3, closable = true, action } = options;
     this.hide();
@@ -2243,6 +2501,9 @@ var ToastNotification = class {
     }
     return this;
   }
+  /**
+   * 토스트 숨기기
+   */
   hide() {
     if (this.notice) {
       this.notice.hide();
@@ -2250,6 +2511,9 @@ var ToastNotification = class {
       this.element = null;
     }
   }
+  /**
+   * 메시지 업데이트
+   */
   update(message) {
     if (this.element) {
       const messageEl = this.element.querySelector(".toast-message");
@@ -2258,6 +2522,9 @@ var ToastNotification = class {
       }
     }
   }
+  /**
+   * 타입 변경
+   */
   setType(type) {
     if (this.element) {
       this.element.style.borderLeftColor = TOAST_COLORS[type];
@@ -2292,34 +2559,51 @@ var ClipDropdown = class {
     this.onClipToNote = options.onClipToNote;
     this.onOpenSettings = options.onOpenSettings;
   }
+  /**
+   * 드롭다운 메뉴 표시
+   */
   show(event) {
     const menu = new import_obsidian8.Menu();
-    menu.addItem((item) => item.setTitle("\u{1F4E5} \uC6F9\uD398\uC774\uC9C0 \uC800\uC7A5 \uC635\uC158").setDisabled(true));
+    menu.addItem(
+      (item) => item.setTitle("\u{1F4E5} \uC6F9\uD398\uC774\uC9C0 \uC800\uC7A5 \uC635\uC158").setDisabled(true)
+    );
     menu.addSeparator();
-    menu.addItem((item) => item.setTitle("\u{1F4C4} \uC804\uCCB4 \uD398\uC774\uC9C0 \uC800\uC7A5").setIcon("file-plus").onClick(() => {
-      this.onClipPage();
-    }));
-    menu.addItem((item) => item.setTitle("\u2702\uFE0F \uC120\uD0DD \uC601\uC5ED \uC800\uC7A5").setIcon("scissors").onClick(() => {
-      this.onClipSelection();
-    }));
+    menu.addItem(
+      (item) => item.setTitle("\u{1F4C4} \uC804\uCCB4 \uD398\uC774\uC9C0 \uC800\uC7A5").setIcon("file-plus").onClick(() => {
+        this.onClipPage();
+      })
+    );
+    menu.addItem(
+      (item) => item.setTitle("\u2702\uFE0F \uC120\uD0DD \uC601\uC5ED \uC800\uC7A5").setIcon("scissors").onClick(() => {
+        this.onClipSelection();
+      })
+    );
     menu.addSeparator();
-    menu.addItem((item) => item.setTitle("\u{1F4CE} \uAE30\uC874 \uB178\uD2B8\uC5D0 \uCD94\uAC00...").setIcon("file-input").onClick(() => {
-      this.showNoteSelector();
-    }));
+    menu.addItem(
+      (item) => item.setTitle("\u{1F4CE} \uAE30\uC874 \uB178\uD2B8\uC5D0 \uCD94\uAC00...").setIcon("file-input").onClick(() => {
+        this.showNoteSelector();
+      })
+    );
     const recentNotes = this.getRecentClippingNotes();
     if (recentNotes.length > 0) {
       menu.addSeparator();
-      menu.addItem((item) => item.setTitle("\uCD5C\uADFC \uD074\uB9AC\uD551").setDisabled(true));
+      menu.addItem(
+        (item) => item.setTitle("\uCD5C\uADFC \uD074\uB9AC\uD551").setDisabled(true)
+      );
       recentNotes.forEach((file) => {
-        menu.addItem((item) => item.setTitle(`  \u2192 ${file.basename}`).setIcon("file").onClick(() => {
-          this.onClipToNote(file);
-        }));
+        menu.addItem(
+          (item) => item.setTitle(`  \u2192 ${file.basename}`).setIcon("file").onClick(() => {
+            this.onClipToNote(file);
+          })
+        );
       });
     }
     menu.addSeparator();
-    menu.addItem((item) => item.setTitle("\u2699\uFE0F \uD074\uB9AC\uD551 \uC124\uC815").setIcon("settings").onClick(() => {
-      this.onOpenSettings();
-    }));
+    menu.addItem(
+      (item) => item.setTitle("\u2699\uFE0F \uD074\uB9AC\uD551 \uC124\uC815").setIcon("settings").onClick(() => {
+        this.onOpenSettings();
+      })
+    );
     if (event instanceof MouseEvent) {
       menu.showAtMouseEvent(event);
     } else {
@@ -2327,24 +2611,36 @@ var ClipDropdown = class {
       menu.showAtPosition({ x: rect.left, y: rect.bottom });
     }
   }
+  /**
+   * 노트 선택기 표시 (퀵 스위처 스타일)
+   */
   showNoteSelector() {
     const menu = new import_obsidian8.Menu();
     const clippingFolder = this.app.vault.getAbstractFileByPath(this.settings.defaultFolder);
     if (clippingFolder instanceof import_obsidian8.TFolder) {
       const files = this.getMarkdownFiles(clippingFolder);
       files.slice(0, 15).forEach((file) => {
-        menu.addItem((item) => item.setTitle(file.basename).setIcon("file").onClick(() => {
-          this.onClipToNote(file);
-        }));
+        menu.addItem(
+          (item) => item.setTitle(file.basename).setIcon("file").onClick(() => {
+            this.onClipToNote(file);
+          })
+        );
       });
       if (files.length > 15) {
-        menu.addItem((item) => item.setTitle(`... ${files.length - 15}\uAC1C \uB354`).setDisabled(true));
+        menu.addItem(
+          (item) => item.setTitle(`... ${files.length - 15}\uAC1C \uB354`).setDisabled(true)
+        );
       }
     } else {
-      menu.addItem((item) => item.setTitle("\uD074\uB9AC\uD551 \uD3F4\uB354\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4").setDisabled(true));
+      menu.addItem(
+        (item) => item.setTitle("\uD074\uB9AC\uD551 \uD3F4\uB354\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4").setDisabled(true)
+      );
     }
     menu.showAtMouseEvent(new MouseEvent("click"));
   }
+  /**
+   * 폴더에서 마크다운 파일 가져오기
+   */
   getMarkdownFiles(folder) {
     const files = [];
     folder.children.forEach((child) => {
@@ -2356,6 +2652,9 @@ var ClipDropdown = class {
     });
     return files.sort((a, b) => b.stat.mtime - a.stat.mtime);
   }
+  /**
+   * 최근 클리핑 노트 가져오기 (최대 5개)
+   */
   getRecentClippingNotes() {
     const clippingFolder = this.app.vault.getAbstractFileByPath(this.settings.defaultFolder);
     if (!(clippingFolder instanceof import_obsidian8.TFolder)) {
@@ -2364,6 +2663,9 @@ var ClipDropdown = class {
     const files = this.getMarkdownFiles(clippingFolder);
     return files.slice(0, 5);
   }
+  /**
+   * 설정 업데이트
+   */
   updateSettings(settings) {
     this.settings = settings;
   }
@@ -2403,15 +2705,24 @@ var AIDropdown = class {
     this.onOpenMultiSourceModal = options.onOpenMultiSourceModal;
     this.onOpenSettings = options.onOpenSettings;
   }
+  /**
+   * 드롭다운 메뉴 표시
+   */
   show(event) {
     const menu = new import_obsidian9.Menu();
     const currentProvider = AI_PROVIDERS[this.settings.provider];
     const hasApiKey = this.hasApiKey(this.settings.provider);
-    menu.addItem((item) => item.setTitle(`\u{1F916} ${currentProvider.displayName} ${hasApiKey ? "\u2705" : "\u26A0\uFE0F \uD0A4 \uD544\uC694"}`).setDisabled(true));
+    menu.addItem(
+      (item) => item.setTitle(
+        `\u{1F916} ${currentProvider.displayName} ${hasApiKey ? "\u2705" : "\u26A0\uFE0F \uD0A4 \uD544\uC694"}`
+      ).setDisabled(true)
+    );
     menu.addSeparator();
-    menu.addItem((item) => item.setTitle("\u2702\uFE0F \uC120\uD0DD \uC601\uC5ED \uBD84\uC11D").setIcon("scissors").setDisabled(!hasApiKey).onClick(() => {
-      this.onAISelection();
-    }));
+    menu.addItem(
+      (item) => item.setTitle("\u2702\uFE0F \uC120\uD0DD \uC601\uC5ED \uBD84\uC11D").setIcon("scissors").setDisabled(!hasApiKey).onClick(() => {
+        this.onAISelection();
+      })
+    );
     menu.addSeparator();
     menu.addItem((item) => item.setTitle("\u{1F4CB} \uD15C\uD50C\uB9BF\uC73C\uB85C \uBD84\uC11D").setDisabled(true));
     const templates = [
@@ -2423,42 +2734,56 @@ var AIDropdown = class {
       { id: "qa-format", label: "\u2753 Q&A \uD615\uC2DD", icon: "help-circle" }
     ];
     templates.forEach((template) => {
-      menu.addItem((item) => item.setTitle(`  ${template.label}`).setIcon(template.icon).setDisabled(!hasApiKey).onClick(() => {
-        this.onOpenAnalysisModal(template.id);
-      }));
+      menu.addItem(
+        (item) => item.setTitle(`  ${template.label}`).setIcon(template.icon).setDisabled(!hasApiKey).onClick(() => {
+          this.onOpenAnalysisModal(template.id);
+        })
+      );
     });
     if (this.savedPrompts.length > 0) {
       menu.addSeparator();
       menu.addItem((item) => item.setTitle("\uC800\uC7A5\uB41C \uD504\uB86C\uD504\uD2B8").setDisabled(true));
       this.savedPrompts.forEach((prompt2) => {
-        menu.addItem((item) => item.setTitle(`  \u{1F4AC} ${prompt2.name}`).setDisabled(!hasApiKey).onClick(() => {
-          this.onAIWithPrompt(prompt2.prompt);
-        }));
+        menu.addItem(
+          (item) => item.setTitle(`  \u{1F4AC} ${prompt2.name}`).setDisabled(!hasApiKey).onClick(() => {
+            this.onAIWithPrompt(prompt2.prompt);
+          })
+        );
       });
     }
     menu.addSeparator();
-    menu.addItem((item) => item.setTitle("\u{1F50D} \uBD84\uC11D \uBAA8\uB2EC \uC5F4\uAE30").setIcon("search").onClick(() => {
-      this.onOpenAnalysisModal();
-    }));
-    menu.addItem((item) => item.setTitle("\u{1F4CA} \uBA40\uD2F0 \uC18C\uC2A4 \uC885\uD569 \uBD84\uC11D").setIcon("layers").setDisabled(!hasApiKey).onClick(() => {
-      this.onOpenMultiSourceModal();
-    }));
+    menu.addItem(
+      (item) => item.setTitle("\u{1F50D} \uBD84\uC11D \uBAA8\uB2EC \uC5F4\uAE30").setIcon("search").onClick(() => {
+        this.onOpenAnalysisModal();
+      })
+    );
+    menu.addItem(
+      (item) => item.setTitle("\u{1F4CA} \uBA40\uD2F0 \uC18C\uC2A4 \uC885\uD569 \uBD84\uC11D").setIcon("layers").setDisabled(!hasApiKey).onClick(() => {
+        this.onOpenMultiSourceModal();
+      })
+    );
     menu.addSeparator();
     menu.addItem((item) => item.setTitle("Provider \uC120\uD0DD").setDisabled(true));
     const providers = Object.values(AI_PROVIDERS);
     providers.forEach((provider) => {
       const isConfigured = this.hasApiKey(provider.id);
       const isSelected = this.settings.provider === provider.id;
-      menu.addItem((item) => item.setTitle(`  ${isSelected ? "\u25CF " : "\u25CB "}${provider.displayName} ${isConfigured ? "\u2705" : ""}`).setDisabled(!isConfigured).onClick(() => {
-        if (isConfigured) {
-          this.onProviderChange(provider.id);
-        }
-      }));
+      menu.addItem(
+        (item) => item.setTitle(
+          `  ${isSelected ? "\u25CF " : "\u25CB "}${provider.displayName} ${isConfigured ? "\u2705" : ""}`
+        ).setDisabled(!isConfigured).onClick(() => {
+          if (isConfigured) {
+            this.onProviderChange(provider.id);
+          }
+        })
+      );
     });
     menu.addSeparator();
-    menu.addItem((item) => item.setTitle("\u2699\uFE0F API \uD0A4 \uC124\uC815...").setIcon("settings").onClick(() => {
-      this.onOpenSettings();
-    }));
+    menu.addItem(
+      (item) => item.setTitle("\u2699\uFE0F API \uD0A4 \uC124\uC815...").setIcon("settings").onClick(() => {
+        this.onOpenSettings();
+      })
+    );
     if (event instanceof MouseEvent) {
       menu.showAtMouseEvent(event);
     } else {
@@ -2466,13 +2791,22 @@ var AIDropdown = class {
       menu.showAtPosition({ x: rect.left, y: rect.bottom });
     }
   }
+  /**
+   * API 키 존재 확인
+   */
   hasApiKey(providerId) {
     const key = this.settings.apiKeys[providerId];
     return !!key && key.trim().length > 0;
   }
+  /**
+   * Provider 변경 핸들러
+   */
   onProviderChange(providerId) {
     console.log("[AIDropdown] Provider changed to:", providerId);
   }
+  /**
+   * 설정 업데이트
+   */
   updateSettings(settings, savedPrompts) {
     this.settings = settings;
     this.savedPrompts = savedPrompts;
@@ -2615,16 +2949,21 @@ Q2: ...
   }
 ];
 var AnalysisModal = class extends import_obsidian11.Modal {
+  // 편집 가능한 콘텐츠 영역
   constructor(options) {
     super(options.app);
+    // UI State
     this.selectedTemplateId = "basic-summary";
     this.customPrompt = "";
     this.includeMetadata = true;
     this.outputFormat = "markdown";
     this.editableContent = "";
+    // 편집 가능한 콘텐츠
+    // UI Elements
     this.promptTextArea = null;
     this.templateContainer = null;
     this.contentTextArea = null;
+    // 통계 컨테이너 참조
     this.statsContainer = null;
     this.settings = options.settings;
     this.savedPrompts = options.savedPrompts;
@@ -2654,6 +2993,9 @@ var AnalysisModal = class extends import_obsidian11.Modal {
     const { contentEl } = this;
     contentEl.empty();
   }
+  /**
+   * 헤더 렌더링
+   */
   renderHeader() {
     const { contentEl } = this;
     const header = contentEl.createDiv({ cls: "analysis-modal-header" });
@@ -2668,6 +3010,9 @@ var AnalysisModal = class extends import_obsidian11.Modal {
       });
     }
   }
+  /**
+   * 콘텐츠 편집 영역 렌더링
+   */
   renderContentPreview() {
     const { contentEl } = this;
     const previewSection = contentEl.createDiv({ cls: "analysis-section preview-section" });
@@ -2744,9 +3089,11 @@ var AnalysisModal = class extends import_obsidian11.Modal {
         `;
     this.updateContentStats();
   }
+  /**
+   * 콘텐츠 통계 업데이트
+   */
   updateContentStats() {
-    if (!this.statsContainer)
-      return;
+    if (!this.statsContainer) return;
     const content = this.editableContent;
     const contentLength = content.length;
     const wordCount = content.split(/\s+/).filter((w) => w).length;
@@ -2762,6 +3109,9 @@ var AnalysisModal = class extends import_obsidian11.Modal {
       });
     }
   }
+  /**
+   * 템플릿 선택 렌더링
+   */
   renderTemplateSelection() {
     const { contentEl } = this;
     const templateSection = contentEl.createDiv({ cls: "analysis-section template-section" });
@@ -2812,9 +3162,11 @@ var AnalysisModal = class extends import_obsidian11.Modal {
       });
     }
   }
+  /**
+   * 템플릿 카드 생성
+   */
   createTemplateCard(template) {
-    if (!this.templateContainer)
-      return;
+    if (!this.templateContainer) return;
     const card = this.templateContainer.createDiv({ cls: "template-card" });
     card.style.cssText = `
             padding: 12px;
@@ -2853,9 +3205,11 @@ var AnalysisModal = class extends import_obsidian11.Modal {
       }
     };
   }
+  /**
+   * 템플릿 선택 상태 업데이트
+   */
   updateTemplateSelection() {
-    if (!this.templateContainer)
-      return;
+    if (!this.templateContainer) return;
     const cards = this.templateContainer.querySelectorAll(".template-card");
     cards.forEach((card, index) => {
       const htmlCard = card;
@@ -2869,6 +3223,9 @@ var AnalysisModal = class extends import_obsidian11.Modal {
       }
     });
   }
+  /**
+   * 커스텀 프롬프트 입력 렌더링
+   */
   renderCustomPrompt() {
     const { contentEl } = this;
     const promptSection = contentEl.createDiv({ cls: "analysis-section prompt-section" });
@@ -2910,6 +3267,9 @@ var AnalysisModal = class extends import_obsidian11.Modal {
       savePromptBtn.onclick = () => this.saveCurrentPrompt();
     }
   }
+  /**
+   * 옵션 렌더링
+   */
   renderOptions() {
     const { contentEl } = this;
     const optionsSection = contentEl.createDiv({ cls: "analysis-section options-section" });
@@ -2919,7 +3279,10 @@ var AnalysisModal = class extends import_obsidian11.Modal {
       Object.entries(AI_PROVIDERS).forEach(([key, provider]) => {
         var _a;
         const isConfigured = (_a = aiService == null ? void 0 : aiService.isProviderConfigured(key)) != null ? _a : false;
-        dropdown.addOption(key, `${provider.displayName} ${isConfigured ? "\u2705" : "\u26A0\uFE0F"}`);
+        dropdown.addOption(
+          key,
+          `${provider.displayName} ${isConfigured ? "\u2705" : "\u26A0\uFE0F"}`
+        );
       });
       dropdown.setValue(this.selectedProvider);
       dropdown.onChange((value) => {
@@ -2943,6 +3306,9 @@ var AnalysisModal = class extends import_obsidian11.Modal {
       });
     });
   }
+  /**
+   * 액션 버튼 렌더링
+   */
   renderActions() {
     const { contentEl } = this;
     const actionsSection = contentEl.createDiv({ cls: "analysis-actions" });
@@ -2981,6 +3347,9 @@ var AnalysisModal = class extends import_obsidian11.Modal {
         `;
     analyzeBtn.onclick = () => this.startAnalysis();
   }
+  /**
+   * 분석 시작
+   */
   async startAnalysis() {
     if (!this.editableContent.trim()) {
       showWarning("\uBD84\uC11D\uD560 \uD14D\uC2A4\uD2B8\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.");
@@ -3006,14 +3375,16 @@ var AnalysisModal = class extends import_obsidian11.Modal {
     this.close();
     await this.onAnalyze(config, this.editableContent.trim());
   }
+  /**
+   * 현재 프롬프트 저장
+   */
   saveCurrentPrompt() {
     if (!this.customPrompt.trim()) {
       showWarning("\uC800\uC7A5\uD560 \uD504\uB86C\uD504\uD2B8\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.");
       return;
     }
     const promptName = prompt("\uD504\uB86C\uD504\uD2B8 \uC774\uB984\uC744 \uC785\uB825\uD558\uC138\uC694:");
-    if (!promptName)
-      return;
+    if (!promptName) return;
     const newPrompt = {
       id: `custom-${Date.now()}`,
       name: promptName,
@@ -3024,15 +3395,23 @@ var AnalysisModal = class extends import_obsidian11.Modal {
       showSuccess(`"${promptName}" \uD504\uB86C\uD504\uD2B8\uAC00 \uC800\uC7A5\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`);
     }
   }
+  /**
+   * URL 자르기
+   */
   truncateUrl(url, maxLength) {
-    if (url.length <= maxLength)
-      return url;
+    if (url.length <= maxLength) return url;
     return url.substring(0, maxLength - 3) + "...";
   }
+  /**
+   * 템플릿 프롬프트 가져오기
+   */
   static getTemplatePrompt(templateId) {
     const template = ANALYSIS_TEMPLATES.find((t) => t.id === templateId);
     return (template == null ? void 0 : template.prompt) || null;
   }
+  /**
+   * 템플릿 목록 가져오기
+   */
   static getTemplates() {
     return ANALYSIS_TEMPLATES;
   }
@@ -3044,11 +3423,13 @@ init_types();
 var ProcessModal = class extends import_obsidian12.Modal {
   constructor(options) {
     super(options.app);
+    // State
     this.state = "preparing";
     this.resultContent = "";
     this.errorMessage = "";
     this.startTime = 0;
     this.endTime = 0;
+    // UI Elements
     this.statusEl = null;
     this.progressEl = null;
     this.resultEl = null;
@@ -3090,6 +3471,9 @@ var ProcessModal = class extends import_obsidian12.Modal {
       this.actionsEl = null;
     }
   }
+  /**
+   * 헤더 렌더링
+   */
   renderHeader() {
     const { contentEl } = this;
     const header = contentEl.createDiv({ cls: "process-modal-header" });
@@ -3110,6 +3494,9 @@ var ProcessModal = class extends import_obsidian12.Modal {
     const templateName = (template == null ? void 0 : template.name) || "\uCEE4\uC2A4\uD140 \uD504\uB86C\uD504\uD2B8";
     providerInfo.createSpan({ text: `\u{1F4CB} ${templateName}` });
   }
+  /**
+   * 상태 표시 렌더링
+   */
   renderStatus() {
     const { contentEl } = this;
     this.statusEl = contentEl.createDiv({ cls: "process-status" });
@@ -3124,9 +3511,11 @@ var ProcessModal = class extends import_obsidian12.Modal {
         `;
     this.updateStatus();
   }
+  /**
+   * 상태 업데이트
+   */
   updateStatus() {
-    if (!this.statusEl)
-      return;
+    if (!this.statusEl) return;
     this.statusEl.empty();
     const statusConfig = {
       preparing: { icon: "\u23F3", text: "\uC900\uBE44 \uC911...", color: "var(--text-muted)" },
@@ -3145,6 +3534,9 @@ var ProcessModal = class extends import_obsidian12.Modal {
       timeEl.style.cssText = `margin-left: auto; font-size: 13px; color: var(--text-muted);`;
     }
   }
+  /**
+   * 진행 바 렌더링
+   */
   renderProgress() {
     const { contentEl } = this;
     this.progressEl = contentEl.createDiv({ cls: "process-progress" });
@@ -3164,14 +3556,19 @@ var ProcessModal = class extends import_obsidian12.Modal {
             transition: width 0.3s ease;
         `;
   }
+  /**
+   * 진행률 업데이트
+   */
   updateProgress(percent) {
-    if (!this.progressEl)
-      return;
+    if (!this.progressEl) return;
     const bar = this.progressEl.querySelector(".progress-bar");
     if (bar) {
       bar.style.width = `${Math.min(100, percent)}%`;
     }
   }
+  /**
+   * 결과 영역 렌더링
+   */
   renderResult() {
     const { contentEl } = this;
     this.resultEl = contentEl.createDiv({ cls: "process-result" });
@@ -3206,12 +3603,22 @@ var ProcessModal = class extends import_obsidian12.Modal {
         `;
     document.head.appendChild(this.styleEl);
   }
+  /**
+   * 결과 업데이트 (스트리밍)
+   */
   async updateResult(content) {
-    if (!this.resultEl)
-      return;
+    if (!this.resultEl) return;
     this.resultEl.empty();
-    await import_obsidian12.MarkdownRenderer.renderMarkdown(content, this.resultEl, "", this.renderComponent);
+    await import_obsidian12.MarkdownRenderer.renderMarkdown(
+      content,
+      this.resultEl,
+      "",
+      this.renderComponent
+    );
   }
+  /**
+   * 액션 버튼 렌더링
+   */
   renderActions() {
     const { contentEl } = this;
     this.actionsEl = contentEl.createDiv({ cls: "process-actions" });
@@ -3236,9 +3643,11 @@ var ProcessModal = class extends import_obsidian12.Modal {
         `;
     cancelBtn.onclick = () => this.close();
   }
+  /**
+   * 완료 후 액션 버튼 업데이트
+   */
   updateActionsForCompletion() {
-    if (!this.actionsEl)
-      return;
+    if (!this.actionsEl) return;
     this.actionsEl.empty();
     const closeBtn = this.actionsEl.createEl("button", {
       text: "\uB2EB\uAE30",
@@ -3284,9 +3693,11 @@ var ProcessModal = class extends import_obsidian12.Modal {
       await this.saveAsNote();
     };
   }
+  /**
+   * 에러 후 액션 버튼 업데이트
+   */
   updateActionsForError() {
-    if (!this.actionsEl)
-      return;
+    if (!this.actionsEl) return;
     this.actionsEl.empty();
     const closeBtn = this.actionsEl.createEl("button", {
       text: "\uB2EB\uAE30",
@@ -3323,6 +3734,9 @@ var ProcessModal = class extends import_obsidian12.Modal {
       this.startProcessing();
     };
   }
+  /**
+   * AI 처리 시작
+   */
   async startProcessing() {
     this.startTime = Date.now();
     this.state = "preparing";
@@ -3338,7 +3752,11 @@ var ProcessModal = class extends import_obsidian12.Modal {
       this.updateStatus();
       this.updateProgress(30);
       this.updateProgress(50);
-      const response = await aiService.generateTextWithProvider(this.config.provider, [{ role: "user", content: prompt2 }], { temperature: 0.7, maxTokens: 4e3 });
+      const response = await aiService.generateTextWithProvider(
+        this.config.provider,
+        [{ role: "user", content: prompt2 }],
+        { temperature: 0.7, maxTokens: 4e3 }
+      );
       const fullContent = response.content;
       this.resultContent = fullContent;
       await this.updateResult(fullContent);
@@ -3357,6 +3775,9 @@ var ProcessModal = class extends import_obsidian12.Modal {
       this.updateActionsForError();
     }
   }
+  /**
+   * 프롬프트 생성
+   */
   buildPrompt() {
     var _a, _b, _c;
     let basePrompt = "";
@@ -3395,9 +3816,11 @@ ${((_c = this.clipData.metadata) == null ? void 0 : _c.siteName) ? `- \uC0AC\uC7
     }
     return finalPrompt;
   }
+  /**
+   * 에러 표시
+   */
   showError(message) {
-    if (!this.resultEl)
-      return;
+    if (!this.resultEl) return;
     this.resultEl.empty();
     const errorEl = this.resultEl.createDiv({ cls: "error-display" });
     errorEl.style.cssText = `
@@ -3411,6 +3834,9 @@ ${((_c = this.clipData.metadata) == null ? void 0 : _c.siteName) ? `- \uC0AC\uC7
     errorEl.createSpan({ text: "\u274C" }).style.fontSize = "32px";
     errorEl.createSpan({ text: message }).style.cssText = "margin-top: 12px; text-align: center;";
   }
+  /**
+   * 새 노트로 저장
+   */
   async saveAsNote() {
     if (!this.resultContent) {
       showWarning("\uC800\uC7A5\uD560 \uB0B4\uC6A9\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.");
@@ -3429,9 +3855,12 @@ ${((_c = this.clipData.metadata) == null ? void 0 : _c.siteName) ? `- \uC0AC\uC7
       showError(message);
     }
   }
+  /**
+   * 노트 내용 구성
+   */
   buildNoteContent() {
     var _a, _b, _c;
-    const now = new Date();
+    const now = /* @__PURE__ */ new Date();
     const timestamp2 = now.toISOString().split("T")[0];
     let content = `---
 title: "${this.clipData.title} - AI \uBD84\uC11D"
@@ -3597,9 +4026,11 @@ var TextInputModal = class extends import_obsidian13.Modal {
 var MultiSourceAnalysisModal = class extends import_obsidian13.Modal {
   constructor(options) {
     super(options.app);
+    // 상태
     this.sources = [];
     this.customPrompt = "";
     this.analysisType = "synthesis";
+    // UI 요소
     this.sourceListContainer = null;
     this.statsContainer = null;
     this.promptTextArea = null;
@@ -3627,6 +4058,9 @@ var MultiSourceAnalysisModal = class extends import_obsidian13.Modal {
     const { contentEl } = this;
     contentEl.empty();
   }
+  // ============================================
+  // 렌더링 메서드
+  // ============================================
   renderHeader() {
     const { contentEl } = this;
     const header = contentEl.createDiv({ cls: "modal-header" });
@@ -3693,8 +4127,7 @@ var MultiSourceAnalysisModal = class extends import_obsidian13.Modal {
     this.updateStats();
   }
   renderSourceList() {
-    if (!this.sourceListContainer)
-      return;
+    if (!this.sourceListContainer) return;
     this.sourceListContainer.empty();
     if (this.sources.length === 0) {
       const emptyState = this.sourceListContainer.createDiv({ cls: "empty-state" });
@@ -3789,7 +4222,10 @@ var MultiSourceAnalysisModal = class extends import_obsidian13.Modal {
     new import_obsidian13.Setting(section).setName("AI \uC81C\uACF5\uC790").setDesc("\uBD84\uC11D\uC5D0 \uC0AC\uC6A9\uD560 AI\uB97C \uC120\uD0DD\uD558\uC138\uC694").addDropdown((dropdown) => {
       Object.values(AI_PROVIDERS).forEach((provider) => {
         const configured = hasApiKey(provider.id);
-        dropdown.addOption(provider.id, `${provider.displayName} ${configured ? "\u2705" : "\u26A0\uFE0F"}`);
+        dropdown.addOption(
+          provider.id,
+          `${provider.displayName} ${configured ? "\u2705" : "\u26A0\uFE0F"}`
+        );
       });
       dropdown.setValue(this.selectedProvider);
       dropdown.onChange((value) => {
@@ -3810,7 +4246,9 @@ var MultiSourceAnalysisModal = class extends import_obsidian13.Modal {
     guide.textContent = "AI\uC5D0\uAC8C \uD2B9\uBCC4\uD55C \uBD84\uC11D \uBC29\uD5A5\uC774\uB098 \uC694\uCCAD\uC0AC\uD56D\uC744 \uC785\uB825\uD558\uC138\uC694. \uBE44\uC6CC\uB450\uBA74 \uAE30\uBCF8 \uBD84\uC11D\uC774 \uC218\uD589\uB429\uB2C8\uB2E4.";
     new import_obsidian13.Setting(section).setClass("prompt-textarea-setting").addTextArea((text) => {
       this.promptTextArea = text;
-      text.setPlaceholder("\uC608\uC2DC:\n- \uC774 \uC790\uB8CC\uB4E4\uC5D0\uC11C AI \uAD50\uC721\uC758 \uD575\uC2EC \uD2B8\uB80C\uB4DC\uB97C \uC815\uB9AC\uD574\uC918\n- \uAC01 \uC18C\uC2A4\uC758 \uC8FC\uC7A5\uC744 \uBE44\uAD50\uD558\uACE0 \uACF5\uD1B5\uC810\uACFC \uCC28\uC774\uC810\uC744 \uBD84\uC11D\uD574\uC918\n- \uC2E4\uC81C \uAD50\uC721 \uD604\uC7A5\uC5D0 \uC801\uC6A9\uD560 \uC218 \uC788\uB294 \uC778\uC0AC\uC774\uD2B8\uB97C \uCD94\uCD9C\uD574\uC918");
+      text.setPlaceholder(
+        "\uC608\uC2DC:\n- \uC774 \uC790\uB8CC\uB4E4\uC5D0\uC11C AI \uAD50\uC721\uC758 \uD575\uC2EC \uD2B8\uB80C\uB4DC\uB97C \uC815\uB9AC\uD574\uC918\n- \uAC01 \uC18C\uC2A4\uC758 \uC8FC\uC7A5\uC744 \uBE44\uAD50\uD558\uACE0 \uACF5\uD1B5\uC810\uACFC \uCC28\uC774\uC810\uC744 \uBD84\uC11D\uD574\uC918\n- \uC2E4\uC81C \uAD50\uC721 \uD604\uC7A5\uC5D0 \uC801\uC6A9\uD560 \uC218 \uC788\uB294 \uC778\uC0AC\uC774\uD2B8\uB97C \uCD94\uCD9C\uD574\uC918"
+      );
       text.inputEl.style.cssText = `
                     width: 100%;
                     min-height: 100px;
@@ -3857,6 +4295,9 @@ var MultiSourceAnalysisModal = class extends import_obsidian13.Modal {
         `;
     analyzeBtn.onclick = () => this.startAnalysis();
   }
+  // ============================================
+  // 소스 관리 메서드
+  // ============================================
   addWebClipSource(clipData) {
     const source = {
       id: generateId(),
@@ -3871,7 +4312,7 @@ var MultiSourceAnalysisModal = class extends import_obsidian13.Modal {
         charCount: clipData.content.length,
         wordCount: clipData.content.split(/\s+/).filter((w) => w).length
       },
-      addedAt: new Date().toISOString()
+      addedAt: (/* @__PURE__ */ new Date()).toISOString()
     };
     this.sources.push(source);
   }
@@ -3891,7 +4332,7 @@ var MultiSourceAnalysisModal = class extends import_obsidian13.Modal {
           charCount: content.length,
           wordCount: content.split(/\s+/).filter((w) => w).length
         },
-        addedAt: new Date().toISOString()
+        addedAt: (/* @__PURE__ */ new Date()).toISOString()
       };
       this.sources.push(source);
       this.renderSourceList();
@@ -3911,7 +4352,7 @@ var MultiSourceAnalysisModal = class extends import_obsidian13.Modal {
         charCount: content.length,
         wordCount: content.split(/\s+/).filter((w) => w).length
       },
-      addedAt: new Date().toISOString()
+      addedAt: (/* @__PURE__ */ new Date()).toISOString()
     };
     this.sources.push(source);
     this.renderSourceList();
@@ -3936,9 +4377,11 @@ var MultiSourceAnalysisModal = class extends import_obsidian13.Modal {
     });
     modal.open();
   }
+  // ============================================
+  // 통계 및 유틸리티
+  // ============================================
   updateStats() {
-    if (!this.statsContainer)
-      return;
+    if (!this.statsContainer) return;
     this.statsContainer.empty();
     const totalSources = this.sources.length;
     const totalChars = this.sources.reduce((sum, s) => sum + s.metadata.charCount, 0);
@@ -3964,6 +4407,9 @@ var MultiSourceAnalysisModal = class extends import_obsidian13.Modal {
             transition: all 0.2s;
         `;
   }
+  // ============================================
+  // 분석 실행
+  // ============================================
   async startAnalysis() {
     if (this.sources.length === 0) {
       showWarning("\uBD84\uC11D\uD560 \uC18C\uC2A4\uB97C \uD558\uB098 \uC774\uC0C1 \uCD94\uAC00\uD574\uC8FC\uC138\uC694.");
@@ -3971,7 +4417,9 @@ var MultiSourceAnalysisModal = class extends import_obsidian13.Modal {
     }
     const aiService = getAIService();
     if (!(aiService == null ? void 0 : aiService.isProviderConfigured(this.selectedProvider))) {
-      showWarning(`${AI_PROVIDERS[this.selectedProvider].displayName} API \uD0A4\uAC00 \uC124\uC815\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.`);
+      showWarning(
+        `${AI_PROVIDERS[this.selectedProvider].displayName} API \uD0A4\uAC00 \uC124\uC815\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.`
+      );
       return;
     }
     const request = {
@@ -3994,9 +4442,11 @@ var GateView = class extends import_obsidian14.ItemView {
     this.useIframe = false;
     this.isFrameReady = false;
     this.insertMode = "cursor";
+    // AI & Clipping
     this.clipDropdown = null;
     this.aiDropdown = null;
     this.clipService = null;
+    // Event listener references for cleanup
     this.newWindowListener = null;
     this.destroyedListener = null;
     this.didNavigateListener = null;
@@ -4043,6 +4493,9 @@ var GateView = class extends import_obsidian14.ItemView {
     this.frameDoc = this.contentEl.doc;
     this.createFrame();
   }
+  /**
+   * Initialize ClipDropdown and AIDropdown instances
+   */
   initializeDropdowns() {
     this.clipDropdown = new ClipDropdown({
       app: this.app,
@@ -4065,6 +4518,12 @@ var GateView = class extends import_obsidian14.ItemView {
       onOpenSettings: () => this.openAISettings()
     });
   }
+  // ============================================
+  // Clipping Handler Methods
+  // ============================================
+  /**
+   * 전체 페이지 원클릭 클리핑
+   */
   async handleClipPage() {
     if (this.useIframe || !this.clipService) {
       showError("Desktop \uD658\uACBD\uC5D0\uC11C\uB9CC \uD074\uB9AC\uD551\uC774 \uAC00\uB2A5\uD569\uB2C8\uB2E4.");
@@ -4072,7 +4531,10 @@ var GateView = class extends import_obsidian14.ItemView {
     }
     const loading = showLoading("\uD398\uC774\uC9C0 \uD074\uB9AC\uD551 \uC911...");
     try {
-      const result = await this.clipService.clipPage(this.frame, this.currentGateState.id);
+      const result = await this.clipService.clipPage(
+        this.frame,
+        this.currentGateState.id
+      );
       loading.hide();
       if (result.success && result.note) {
         showSuccess(`\uD074\uB9AC\uD551 \uC644\uB8CC: ${result.note.path}`);
@@ -4085,6 +4547,9 @@ var GateView = class extends import_obsidian14.ItemView {
       showError(`\uD074\uB9AC\uD551 \uC624\uB958: ${errorMessage}`);
     }
   }
+  /**
+   * 선택 텍스트 클리핑
+   */
   async handleClipSelection() {
     if (this.useIframe || !this.clipService) {
       showError("Desktop \uD658\uACBD\uC5D0\uC11C\uB9CC \uD074\uB9AC\uD551\uC774 \uAC00\uB2A5\uD569\uB2C8\uB2E4.");
@@ -4092,7 +4557,10 @@ var GateView = class extends import_obsidian14.ItemView {
     }
     const loading = showLoading("\uC120\uD0DD \uD14D\uC2A4\uD2B8 \uD074\uB9AC\uD551 \uC911...");
     try {
-      const result = await this.clipService.clipSelection(this.frame, this.currentGateState.id);
+      const result = await this.clipService.clipSelection(
+        this.frame,
+        this.currentGateState.id
+      );
       loading.hide();
       if (result.success && result.note) {
         showSuccess(`\uD074\uB9AC\uD551 \uC644\uB8CC: ${result.note.path}`);
@@ -4105,6 +4573,9 @@ var GateView = class extends import_obsidian14.ItemView {
       showError(`\uD074\uB9AC\uD551 \uC624\uB958: ${errorMessage}`);
     }
   }
+  /**
+   * 기존 노트에 클리핑 추가
+   */
   async handleClipToNote(targetFile) {
     if (this.useIframe || !this.clipService) {
       showError("Desktop \uD658\uACBD\uC5D0\uC11C\uB9CC \uD074\uB9AC\uD551\uC774 \uAC00\uB2A5\uD569\uB2C8\uB2E4.");
@@ -4112,7 +4583,11 @@ var GateView = class extends import_obsidian14.ItemView {
     }
     const loading = showLoading(`${targetFile.basename}\uC5D0 \uCD94\uAC00 \uC911...`);
     try {
-      const result = await this.clipService.clipToNote(this.frame, this.currentGateState.id, targetFile);
+      const result = await this.clipService.clipToNote(
+        this.frame,
+        this.currentGateState.id,
+        targetFile
+      );
       loading.hide();
       if (result.success) {
         showSuccess(`\uD074\uB9AC\uD551\uC774 ${targetFile.basename}\uC5D0 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4.`);
@@ -4125,11 +4600,20 @@ var GateView = class extends import_obsidian14.ItemView {
       showError(`\uD074\uB9AC\uD551 \uC624\uB958: ${errorMessage}`);
     }
   }
+  /**
+   * 클리핑 설정 열기
+   */
   openClipSettings() {
     var _a, _b, _c;
     (_a = this.app.setting) == null ? void 0 : _a.open();
     (_c = (_b = this.app.setting) == null ? void 0 : _b.openTabById) == null ? void 0 : _c.call(_b, this.plugin.manifest.id);
   }
+  // ============================================
+  // AI Handler Methods
+  // ============================================
+  /**
+   * 페이지 AI 요약 (원클릭)
+   */
   async handleAISummary() {
     if (this.useIframe) {
       showError("Desktop \uD658\uACBD\uC5D0\uC11C\uB9CC AI \uAE30\uB2A5\uC774 \uAC00\uB2A5\uD569\uB2C8\uB2E4.");
@@ -4153,10 +4637,13 @@ var GateView = class extends import_obsidian14.ItemView {
         showError("\uD398\uC774\uC9C0 \uCF58\uD150\uCE20\uB97C \uCD94\uCD9C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
         return;
       }
-      const response = await aiService.summarizeContent(content.textContent, this.plugin.settings.ai.defaultLanguage);
+      const response = await aiService.summarizeContent(
+        content.textContent,
+        this.plugin.settings.ai.defaultLanguage
+      );
       loading.hide();
       if (response.success) {
-        const timestamp2 = new Date().toISOString().split("T")[0];
+        const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
         const currentUrl = await ContentExtractor2.getCurrentUrl(this.frame);
         const baseFileName = `AI \uC694\uC57D - ${content.title || "Untitled"} - ${timestamp2}.md`;
         const fileName = await this.getUniqueFileName(baseFileName);
@@ -4202,6 +4689,9 @@ ${response.content}
       showError(`AI \uC624\uB958: ${errorMessage}`);
     }
   }
+  /**
+   * 템플릿 기반 AI 처리
+   */
   async handleAIWithTemplate(templateId) {
     if (this.useIframe) {
       showError("Desktop \uD658\uACBD\uC5D0\uC11C\uB9CC AI \uAE30\uB2A5\uC774 \uAC00\uB2A5\uD569\uB2C8\uB2E4.");
@@ -4229,7 +4719,7 @@ ${response.content}
         metadata: {
           siteName: content.siteName
         },
-        clippedAt: new Date().toISOString(),
+        clippedAt: (/* @__PURE__ */ new Date()).toISOString(),
         gateId: this.currentGateState.id
       };
       const config = {
@@ -4247,6 +4737,9 @@ ${response.content}
       showError(`\uD15C\uD50C\uB9BF \uCC98\uB9AC \uC624\uB958: ${errorMessage}`);
     }
   }
+  /**
+   * 커스텀 프롬프트로 AI 처리
+   */
   async handleAIWithPrompt(prompt2) {
     if (this.useIframe) {
       showError("Desktop \uD658\uACBD\uC5D0\uC11C\uB9CC AI \uAE30\uB2A5\uC774 \uAC00\uB2A5\uD569\uB2C8\uB2E4.");
@@ -4266,13 +4759,16 @@ ${response.content}
         showError("\uD398\uC774\uC9C0 \uCF58\uD150\uCE20\uB97C \uCD94\uCD9C\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.");
         return;
       }
-      const response = await aiService.simpleGenerate(`${prompt2}
+      const response = await aiService.simpleGenerate(
+        `${prompt2}
 
 \uCF58\uD150\uCE20:
-${content.textContent}`, `\uB2F9\uC2E0\uC740 \uC6F9 \uCF58\uD150\uCE20 \uBD84\uC11D \uC804\uBB38\uAC00\uC785\uB2C8\uB2E4. \uD56D\uC0C1 ${this.plugin.settings.ai.defaultLanguage}\uB85C \uC751\uB2F5\uD558\uC138\uC694.`);
+${content.textContent}`,
+        `\uB2F9\uC2E0\uC740 \uC6F9 \uCF58\uD150\uCE20 \uBD84\uC11D \uC804\uBB38\uAC00\uC785\uB2C8\uB2E4. \uD56D\uC0C1 ${this.plugin.settings.ai.defaultLanguage}\uB85C \uC751\uB2F5\uD558\uC138\uC694.`
+      );
       loading.hide();
       if (response.success) {
-        const timestamp2 = new Date().toISOString().split("T")[0];
+        const timestamp2 = (/* @__PURE__ */ new Date()).toISOString().split("T")[0];
         const currentUrl = await ContentExtractor2.getCurrentUrl(this.frame);
         const baseFileName = `AI \uBD84\uC11D - ${content.title || "Untitled"} - ${timestamp2}.md`;
         const fileName = await this.getUniqueFileName(baseFileName);
@@ -4324,6 +4820,9 @@ ${response.content}
       showError(`AI \uC624\uB958: ${errorMessage}`);
     }
   }
+  /**
+   * 선택 텍스트 AI 처리
+   */
   async handleAISelection() {
     if (this.useIframe) {
       showError("Desktop \uD658\uACBD\uC5D0\uC11C\uB9CC AI \uAE30\uB2A5\uC774 \uAC00\uB2A5\uD569\uB2C8\uB2E4.");
@@ -4342,7 +4841,10 @@ ${response.content}
         return;
       }
       const loading = showLoading("\uC120\uD0DD \uD14D\uC2A4\uD2B8 AI \uCC98\uB9AC \uC911...");
-      const response = await aiService.summarizeContent(selection.text, this.plugin.settings.ai.defaultLanguage);
+      const response = await aiService.summarizeContent(
+        selection.text,
+        this.plugin.settings.ai.defaultLanguage
+      );
       loading.hide();
       if (response.success) {
         new import_obsidian14.Notice(`AI \uBD84\uC11D \uACB0\uACFC:
@@ -4355,6 +4857,10 @@ ${response.content.substring(0, 200)}...`, 1e4);
       showError(`AI \uC624\uB958: ${errorMessage}`);
     }
   }
+  /**
+   * 분석 모달 열기
+   * @param templateId 초기 선택할 템플릿 ID (선택사항)
+   */
   async openAnalysisModal(templateId) {
     if (this.useIframe) {
       showError("Desktop \uD658\uACBD\uC5D0\uC11C\uB9CC \uBD84\uC11D \uAE30\uB2A5\uC774 \uAC00\uB2A5\uD569\uB2C8\uB2E4.");
@@ -4385,7 +4891,7 @@ ${response.content.substring(0, 200)}...`, 1e4);
         metadata: {
           siteName: content.siteName
         },
-        clippedAt: new Date().toISOString(),
+        clippedAt: (/* @__PURE__ */ new Date()).toISOString(),
         gateId: this.currentGateState.id
       };
       const modal = new AnalysisModal({
@@ -4394,7 +4900,9 @@ ${response.content.substring(0, 200)}...`, 1e4);
         savedPrompts: this.plugin.settings.savedPrompts || [],
         clipData,
         initialText: selectedText,
+        // 선택된 텍스트 전달
         initialTemplateId: templateId,
+        // 초기 템플릿 전달
         onAnalyze: async (config, editedContent) => {
           const updatedClipData = { ...clipData, content: editedContent };
           await this.runAnalysis(updatedClipData, config);
@@ -4410,6 +4918,9 @@ ${response.content.substring(0, 200)}...`, 1e4);
       showError(`\uBD84\uC11D \uBAA8\uB2EC \uC624\uB958: ${errorMessage}`);
     }
   }
+  /**
+   * AI 분석 실행 (ProcessModal과 함께)
+   */
   async runAnalysis(clipData, config) {
     const processModal = new ProcessModal({
       app: this.app,
@@ -4421,6 +4932,9 @@ ${response.content.substring(0, 200)}...`, 1e4);
     });
     processModal.open();
   }
+  /**
+   * 분석 결과 저장
+   */
   async saveAnalysisResult(content, title) {
     try {
       const aiSettings = this.plugin.settings.ai;
@@ -4443,6 +4957,10 @@ ${response.content.substring(0, 200)}...`, 1e4);
       return null;
     }
   }
+  /**
+   * 폴더 내 고유한 파일 경로 생성
+   * 파일이 이미 존재하면 (1), (2), ... 숫자를 붙여 고유하게 만듦
+   */
   async getUniqueFilePath(folderPath, baseName) {
     const extension = ".md";
     let filePath = `${folderPath}/${baseName}${extension}`;
@@ -4462,6 +4980,9 @@ ${response.content.substring(0, 200)}...`, 1e4);
     }
     return filePath;
   }
+  /**
+   * 멀티 소스 분석 모달 열기
+   */
   async openMultiSourceModal() {
     const loading = showLoading("\uBA40\uD2F0 \uC18C\uC2A4 \uBD84\uC11D \uC900\uBE44 \uC911...");
     try {
@@ -4479,7 +5000,7 @@ ${response.content.substring(0, 200)}...`, 1e4);
               metadata: {
                 siteName: content.siteName || this.extractSiteName(url)
               },
-              clippedAt: new Date().toISOString(),
+              clippedAt: (/* @__PURE__ */ new Date()).toISOString(),
               gateId: this.currentGateState.id
             };
           }
@@ -4503,10 +5024,13 @@ ${response.content.substring(0, 200)}...`, 1e4);
       showError(`\uBA40\uD2F0 \uC18C\uC2A4 \uBD84\uC11D \uC624\uB958: ${errorMessage}`);
     }
   }
+  /**
+   * 사이트 이름 추출
+   */
   extractSiteName(url) {
     try {
       const urlObj = new URL(url);
-      let hostname = urlObj.hostname.replace(/^www\./, "");
+      const hostname = urlObj.hostname.replace(/^www\./, "");
       const siteNames = {
         "youtube.com": "YouTube",
         "github.com": "GitHub",
@@ -4528,6 +5052,9 @@ ${response.content.substring(0, 200)}...`, 1e4);
       return "Unknown";
     }
   }
+  /**
+   * 멀티 소스 AI 분석 실행
+   */
   async runMultiSourceAnalysis(request) {
     const loading = showLoading("\uBA40\uD2F0 \uC18C\uC2A4 \uBD84\uC11D \uC911...");
     try {
@@ -4600,7 +5127,7 @@ analysis-type: ${request.analysisType}
 sources-count: ${request.sources.length}
 total-chars: ${request.sources.reduce((acc, s) => acc + s.metadata.charCount, 0)}
 provider: ${provider}
-created: ${new Date().toISOString()}
+created: ${(/* @__PURE__ */ new Date()).toISOString()}
 ---
 
 # \uBA40\uD2F0 \uC18C\uC2A4 ${analysisTypeNames[request.analysisType]}
@@ -4610,7 +5137,7 @@ created: ${new Date().toISOString()}
 - **\uC18C\uC2A4 \uC218**: ${request.sources.length}\uAC1C
 - **\uCD1D \uBD84\uC11D \uBB38\uC790 \uC218**: ${request.sources.reduce((acc, s) => acc + s.metadata.charCount, 0).toLocaleString()}\uC790
 - **AI \uBAA8\uB378**: ${provider}
-- **\uBD84\uC11D \uC77C\uC2DC**: ${new Date().toLocaleString("ko-KR")}
+- **\uBD84\uC11D \uC77C\uC2DC**: ${(/* @__PURE__ */ new Date()).toLocaleString("ko-KR")}
 
 ## \uBD84\uC11D \uACB0\uACFC
 
@@ -4623,7 +5150,7 @@ ${sourceRefs}
 ---
 *\uC774 \uBD84\uC11D\uC740 Easy Gate \uBA40\uD2F0 \uC18C\uC2A4 \uBD84\uC11D \uAE30\uB2A5\uC73C\uB85C \uC0DD\uC131\uB418\uC5C8\uC2B5\uB2C8\uB2E4.*
 `;
-      const title = `\uBA40\uD2F0\uC18C\uC2A4_${analysisTypeNames[request.analysisType]}_${new Date().toISOString().split("T")[0]}`;
+      const title = `\uBA40\uD2F0\uC18C\uC2A4_${analysisTypeNames[request.analysisType]}_${(/* @__PURE__ */ new Date()).toISOString().split("T")[0]}`;
       await this.saveAnalysisResult(noteContent, title);
     } catch (error) {
       loading.hide();
@@ -4631,20 +5158,30 @@ ${sourceRefs}
       showError(`\uBA40\uD2F0 \uC18C\uC2A4 \uBD84\uC11D \uC624\uB958: ${errorMessage}`);
     }
   }
+  /**
+   * 멀티 소스 AI API 호출 (AIService 위임)
+   */
   async callMultiSourceAI(provider, _apiKey, systemPrompt, userPrompt) {
     const aiService = getAIService();
     if (!aiService) {
       throw new Error("AI \uC11C\uBE44\uC2A4\uAC00 \uCD08\uAE30\uD654\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4.");
     }
-    const response = await aiService.generateTextWithProvider(provider, [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt }
-    ], { temperature: 0.7, maxTokens: 8192 });
+    const response = await aiService.generateTextWithProvider(
+      provider,
+      [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      { temperature: 0.7, maxTokens: 8192 }
+    );
     if (!response.success || !response.content) {
       throw new Error(response.error || "AI \uC751\uB2F5\uC744 \uBC1B\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.");
     }
     return response.content;
   }
+  /**
+   * 프롬프트를 설정에 저장
+   */
   async savePromptToSettings(prompt2) {
     if (!this.plugin.settings.savedPrompts) {
       this.plugin.settings.savedPrompts = [];
@@ -4652,9 +5189,15 @@ ${sourceRefs}
     this.plugin.settings.savedPrompts.push(prompt2);
     await this.plugin.saveSettings();
     if (this.aiDropdown) {
-      this.aiDropdown.updateSettings(this.plugin.settings.ai, this.plugin.settings.savedPrompts);
+      this.aiDropdown.updateSettings(
+        this.plugin.settings.ai,
+        this.plugin.settings.savedPrompts
+      );
     }
   }
+  /**
+   * AI 설정 열기
+   */
   openAISettings() {
     var _a, _b, _c;
     (_a = this.app.setting) == null ? void 0 : _a.open();
@@ -4671,16 +5214,14 @@ ${sourceRefs}
     const backBtn = new import_obsidian14.ButtonComponent(controlRow).setIcon("arrow-left").setTooltip("Back").onClick(() => {
       if (!this.useIframe) {
         const webview = this.frame;
-        if (webview.canGoBack())
-          webview.goBack();
+        if (webview.canGoBack()) webview.goBack();
       }
     });
     backBtn.buttonEl.setAttribute("aria-label", "Navigate back");
     const fwdBtn = new import_obsidian14.ButtonComponent(controlRow).setIcon("arrow-right").setTooltip("Forward").onClick(() => {
       if (!this.useIframe) {
         const webview = this.frame;
-        if (webview.canGoForward())
-          webview.goForward();
+        if (webview.canGoForward()) webview.goForward();
       }
     });
     fwdBtn.buttonEl.setAttribute("aria-label", "Navigate forward");
@@ -4719,12 +5260,22 @@ ${sourceRefs}
     if (!this.useIframe) {
       controlRow.createSpan({ cls: "gate-divider" });
       if (this.clipDropdown) {
-        createClipButton(controlRow, this.clipDropdown, () => this.handleClipPage());
+        createClipButton(
+          controlRow,
+          this.clipDropdown,
+          () => this.handleClipPage()
+        );
       }
       if (this.aiDropdown) {
         const aiService = getAIService();
         const hasApiKey = (_a = aiService == null ? void 0 : aiService.isProviderConfigured(this.plugin.settings.ai.provider)) != null ? _a : false;
-        createAIButton(controlRow, this.aiDropdown, () => this.openAnalysisModal(), hasApiKey);
+        createAIButton(
+          controlRow,
+          this.aiDropdown,
+          () => this.openAnalysisModal(),
+          // 분석 모달 열기로 변경
+          hasApiKey
+        );
       }
     }
   }
@@ -4739,8 +5290,7 @@ ${sourceRefs}
       tab.setAttribute("aria-selected", String(isActive));
       tab.setAttribute("aria-label", gate.title);
       tab.tabIndex = isActive ? 0 : -1;
-      if (isActive)
-        tab.addClass("active");
+      if (isActive) tab.addClass("active");
       const iconContainer = tab.createSpan({ cls: "gate-tab-icon" });
       (0, import_obsidian14.setIcon)(iconContainer, gate.icon || "globe");
       tab.createSpan({ text: gate.title, cls: "gate-tab-title" });
@@ -4793,8 +5343,7 @@ ${sourceRefs}
       await this.plugin.addGate(newGate);
       new import_obsidian14.Notice(`New Gate Created: ${domain}`);
       const bar = this.topBarEl.querySelector(".gate-tab-bar");
-      if (bar)
-        this.renderTabBar(bar);
+      if (bar) this.renderTabBar(bar);
       this.navigateTo(url);
     }
   }
@@ -4829,7 +5378,7 @@ ${sourceRefs}
         const pageContent = await ContentExtractor.extractPageContent(this.frame);
         const pageTitle = (pageContent == null ? void 0 : pageContent.title) || this.currentGateState.title || "Web Clip";
         const siteName = (pageContent == null ? void 0 : pageContent.siteName) || this.extractSiteName(currentUrl);
-        const now = new Date();
+        const now = /* @__PURE__ */ new Date();
         const dateStr = now.toISOString().split("T")[0];
         const timeStr = now.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
         const fullDateTime = `${dateStr} ${timeStr}`;
@@ -4862,7 +5411,7 @@ ${formattedText}
         new import_obsidian14.Notice(`Created new note: ${fileName}`);
       } catch (error) {
         console.error("Error creating note with metadata:", error);
-        const baseFileName = `Note ${new Date().toISOString().slice(0, 19).replace(/T|:/g, "-")}.md`;
+        const baseFileName = `Note ${(/* @__PURE__ */ new Date()).toISOString().slice(0, 19).replace(/T|:/g, "-")}.md`;
         const fileName = await this.getUniqueFileName(baseFileName);
         const file = await this.plugin.app.vault.create(fileName, formattedText);
         await this.plugin.app.workspace.getLeaf("tab").openFile(file);
@@ -4883,8 +5432,14 @@ ${formattedText}
     }
     new import_obsidian14.Notice("Text applied!");
   }
+  /**
+   * 선택된 텍스트를 마크다운 형식으로 포맷팅
+   * - 문단 구분
+   * - 리스트 감지 및 변환
+   * - 인용구 처리
+   */
   formatTextAsMarkdown(text) {
-    let formatted = text.trim();
+    const formatted = text.trim();
     const lines = formatted.split("\n");
     const processedLines = [];
     for (let i = 0; i < lines.length; i++) {
@@ -4909,6 +5464,10 @@ ${formattedText}
     }
     return processedLines.join("\n").replace(/\n{3,}/g, "\n\n");
   }
+  /**
+   * 중복 파일명 방지를 위해 고유한 파일명 생성
+   * 파일이 이미 존재하면 (1), (2), ... 숫자를 붙여 고유하게 만듦
+   */
   async getUniqueFileName(fileName) {
     const baseName = fileName.replace(/\.md$/, "");
     const extension = ".md";
@@ -4942,8 +5501,7 @@ ${formattedText}
       this.frame = createWebviewTag(this.options, onReady, this.frameDoc);
       this.newWindowListener = (e) => {
         const url = e.url;
-        if (!url)
-          return;
+        if (!url) return;
         const oauthDomains = [
           "accounts.google.com",
           "accounts.youtube.com",
@@ -5005,6 +5563,7 @@ ${formattedText}
     this.clipService = null;
     super.onunload();
   }
+  // ... Menu handlers
   onPaneMenu(menu, source) {
     super.onPaneMenu(menu, source);
     menu.addItem((item) => {
@@ -5046,7 +5605,7 @@ ${formattedText}
 
 // src/fns/openView.ts
 var openView = async (workspace, id, position) => {
-  let leafs = workspace.getLeavesOfType(id);
+  const leafs = workspace.getLeavesOfType(id);
   if (leafs.length > 0) {
     workspace.revealLeaf(leafs[0]);
     return leafs[0];
@@ -5094,6 +5653,7 @@ var registerGate = (plugin, options) => {
     plugin.addRibbonIcon(iconName, options.title, async (evt) => openView(plugin.app.workspace, options.id, options.position));
   }
   plugin.addCommand({
+    // btoa()는 ASCII만 지원하므로 UTF-8 URL을 위해 encodeURIComponent 사용
     id: `open-gate-${btoa(encodeURIComponent(options.url))}`,
     name: `Easy Gate: ${options.title}`,
     callback: async () => await openView(plugin.app.workspace, options.id, options.position)
@@ -5187,13 +5747,13 @@ var ModalListGates = class extends import_obsidian18.Modal {
 var import_obsidian19 = require("obsidian");
 
 // node_modules/yaml/browser/dist/nodes/identity.js
-var ALIAS = Symbol.for("yaml.alias");
-var DOC = Symbol.for("yaml.document");
-var MAP = Symbol.for("yaml.map");
-var PAIR = Symbol.for("yaml.pair");
-var SCALAR = Symbol.for("yaml.scalar");
-var SEQ = Symbol.for("yaml.seq");
-var NODE_TYPE = Symbol.for("yaml.node.type");
+var ALIAS = /* @__PURE__ */ Symbol.for("yaml.alias");
+var DOC = /* @__PURE__ */ Symbol.for("yaml.document");
+var MAP = /* @__PURE__ */ Symbol.for("yaml.map");
+var PAIR = /* @__PURE__ */ Symbol.for("yaml.pair");
+var SCALAR = /* @__PURE__ */ Symbol.for("yaml.scalar");
+var SEQ = /* @__PURE__ */ Symbol.for("yaml.seq");
+var NODE_TYPE = /* @__PURE__ */ Symbol.for("yaml.node.type");
 var isAlias = (node) => !!node && typeof node === "object" && node[NODE_TYPE] === ALIAS;
 var isDocument = (node) => !!node && typeof node === "object" && node[NODE_TYPE] === DOC;
 var isMap = (node) => !!node && typeof node === "object" && node[NODE_TYPE] === MAP;
@@ -5223,9 +5783,9 @@ function isNode(node) {
 var hasAnchor = (node) => (isScalar(node) || isCollection(node)) && !!node.anchor;
 
 // node_modules/yaml/browser/dist/visit.js
-var BREAK = Symbol("break visit");
-var SKIP = Symbol("skip children");
-var REMOVE = Symbol("remove node");
+var BREAK = /* @__PURE__ */ Symbol("break visit");
+var SKIP = /* @__PURE__ */ Symbol("skip children");
+var REMOVE = /* @__PURE__ */ Symbol("remove node");
 function visit(node, visitor) {
   const visitor_ = initVisitor(visitor);
   if (isDocument(node)) {
@@ -5383,20 +5943,24 @@ var escapeChars = {
   "}": "%7D"
 };
 var escapeTagName = (tn) => tn.replace(/[!,[\]{}]/g, (ch) => escapeChars[ch]);
-var Directives = class {
+var Directives = class _Directives {
   constructor(yaml, tags) {
     this.docStart = null;
     this.docEnd = false;
-    this.yaml = Object.assign({}, Directives.defaultYaml, yaml);
-    this.tags = Object.assign({}, Directives.defaultTags, tags);
+    this.yaml = Object.assign({}, _Directives.defaultYaml, yaml);
+    this.tags = Object.assign({}, _Directives.defaultTags, tags);
   }
   clone() {
-    const copy = new Directives(this.yaml, this.tags);
+    const copy = new _Directives(this.yaml, this.tags);
     copy.docStart = this.docStart;
     return copy;
   }
+  /**
+   * During parsing, get a Directives instance for the current document and
+   * update the stream state according to the current version's spec.
+   */
   atDocument() {
-    const res = new Directives(this.yaml, this.tags);
+    const res = new _Directives(this.yaml, this.tags);
     switch (this.yaml.version) {
       case "1.1":
         this.atNextDocument = true;
@@ -5404,18 +5968,22 @@ var Directives = class {
       case "1.2":
         this.atNextDocument = false;
         this.yaml = {
-          explicit: Directives.defaultYaml.explicit,
+          explicit: _Directives.defaultYaml.explicit,
           version: "1.2"
         };
-        this.tags = Object.assign({}, Directives.defaultTags);
+        this.tags = Object.assign({}, _Directives.defaultTags);
         break;
     }
     return res;
   }
+  /**
+   * @param onError - May be called even if the action was successful
+   * @returns `true` on success
+   */
   add(line, onError) {
     if (this.atNextDocument) {
-      this.yaml = { explicit: Directives.defaultYaml.explicit, version: "1.1" };
-      this.tags = Object.assign({}, Directives.defaultTags);
+      this.yaml = { explicit: _Directives.defaultYaml.explicit, version: "1.1" };
+      this.tags = Object.assign({}, _Directives.defaultTags);
       this.atNextDocument = false;
     }
     const parts = line.trim().split(/[ \t]+/);
@@ -5452,6 +6020,12 @@ var Directives = class {
         return false;
     }
   }
+  /**
+   * Resolves a tag, matching handles to those defined in %TAG directives.
+   *
+   * @returns Resolved tag, which may also be the non-specific tag `'!'` or a
+   *   `'!local'` tag, or `null` if unresolvable.
+   */
   tagName(source, onError) {
     if (source === "!")
       return "!";
@@ -5486,6 +6060,10 @@ var Directives = class {
     onError(`Could not resolve tag: ${source}`);
     return null;
   }
+  /**
+   * Given a fully resolved tag, returns its printable string form,
+   * taking into account current tag prefixes and defaults.
+   */
   tagString(tag) {
     for (const [handle, prefix] of Object.entries(this.tags)) {
       if (tag.startsWith(prefix))
@@ -5556,6 +6134,11 @@ function createNodeAnchors(doc, prefix) {
       prevAnchors.add(anchor);
       return anchor;
     },
+    /**
+     * With circular references, the source node is only resolved after all
+     * of its child nodes are. This is why anchors are set only after all of
+     * the nodes have been created.
+     */
     setAnchors: () => {
       for (const source of aliasObjects) {
         const ref = sourceObjects.get(source);
@@ -5644,12 +6227,14 @@ var NodeBase = class {
   constructor(type) {
     Object.defineProperty(this, NODE_TYPE, { value: type });
   }
+  /** Create a copy of this node.  */
   clone() {
     const copy = Object.create(Object.getPrototypeOf(this), Object.getOwnPropertyDescriptors(this));
     if (this.range)
       copy.range = this.range.slice();
     return copy;
   }
+  /** A plain JavaScript representation of this node. */
   toJS(doc, { mapAsMap, maxAliasCount, onAnchor, reviver } = {}) {
     if (!isDocument(doc))
       throw new TypeError("A document argument is required");
@@ -5680,6 +6265,10 @@ var Alias = class extends NodeBase {
       }
     });
   }
+  /**
+   * Resolve the value of this alias within `doc`, finding the last
+   * instance of the `source` anchor before this node.
+   */
   resolve(doc, ctx) {
     let nodes;
     if (ctx == null ? void 0 : ctx.aliasResolveCache) {
@@ -5893,6 +6482,11 @@ var Collection = class extends NodeBase {
       writable: true
     });
   }
+  /**
+   * Create a copy of this collection.
+   *
+   * @param schema - If defined, overwrites the original's schema
+   */
   clone(schema4) {
     const copy = Object.create(Object.getPrototypeOf(this), Object.getOwnPropertyDescriptors(this));
     if (schema4)
@@ -5902,6 +6496,11 @@ var Collection = class extends NodeBase {
       copy.range = this.range.slice();
     return copy;
   }
+  /**
+   * Adds a value to the collection. For `!!map` and `!!omap` the value must
+   * be a Pair instance or a `{ key, value }` object, which may not have a key
+   * that already exists in the map.
+   */
   addIn(path, value) {
     if (isEmptyPath(path))
       this.add(value);
@@ -5916,6 +6515,10 @@ var Collection = class extends NodeBase {
         throw new Error(`Expected YAML collection at ${key}. Remaining path: ${rest}`);
     }
   }
+  /**
+   * Removes a value from the collection.
+   * @returns `true` if the item was found and removed.
+   */
   deleteIn(path) {
     const [key, ...rest] = path;
     if (rest.length === 0)
@@ -5926,6 +6529,11 @@ var Collection = class extends NodeBase {
     else
       throw new Error(`Expected YAML collection at ${key}. Remaining path: ${rest}`);
   }
+  /**
+   * Returns item at `key`, or `undefined` if not found. By default unwraps
+   * scalar values from their surrounding node; to disable set `keepScalar` to
+   * `true` (collections are always returned intact).
+   */
   getIn(path, keepScalar) {
     const [key, ...rest] = path;
     const node = this.get(key, true);
@@ -5942,6 +6550,9 @@ var Collection = class extends NodeBase {
       return n == null || allowScalar && isScalar(n) && n.value == null && !n.commentBefore && !n.comment && !n.tag;
     });
   }
+  /**
+   * Checks if the collection includes a value with the key `key`.
+   */
   hasIn(path) {
     const [key, ...rest] = path;
     if (rest.length === 0)
@@ -5949,6 +6560,10 @@ var Collection = class extends NodeBase {
     const node = this.get(key, true);
     return isCollection(node) ? node.hasIn(rest) : false;
   }
+  /**
+   * Sets a value in this collection. For `!!set`, `value` needs to be a
+   * boolean to add/remove the item from the set.
+   */
   setIn(path, value) {
     const [key, ...rest] = path;
     if (rest.length === 0) {
@@ -6734,7 +7349,7 @@ function createPair(key, value, ctx) {
   const v = createNode(value, void 0, ctx);
   return new Pair(k, v);
 }
-var Pair = class {
+var Pair = class _Pair {
   constructor(key, value = null) {
     Object.defineProperty(this, NODE_TYPE, { value: PAIR });
     this.key = key;
@@ -6746,7 +7361,7 @@ var Pair = class {
       key = key.clone(schema4);
     if (isNode(value))
       value = value.clone(schema4);
-    return new Pair(key, value);
+    return new _Pair(key, value);
   }
   toJSON(_, ctx) {
     const pair = (ctx == null ? void 0 : ctx.mapAsMap) ? /* @__PURE__ */ new Map() : {};
@@ -6914,6 +7529,10 @@ var YAMLMap = class extends Collection {
     super(MAP, schema4);
     this.items = [];
   }
+  /**
+   * A generic collection parsing method that can be extended
+   * to other node classes that inherit from YAMLMap
+   */
   static from(schema4, obj, ctx) {
     const { keepUndefined, replacer } = ctx;
     const map2 = new this(schema4);
@@ -6937,6 +7556,12 @@ var YAMLMap = class extends Collection {
     }
     return map2;
   }
+  /**
+   * Adds a value to the collection.
+   *
+   * @param overwrite - If not set `true`, using a key that is already in the
+   *   collection will throw. Otherwise, overwrites the previous value.
+   */
   add(pair, overwrite) {
     var _a;
     let _pair;
@@ -6984,6 +7609,11 @@ var YAMLMap = class extends Collection {
   set(key, value) {
     this.add(new Pair(key, value), true);
   }
+  /**
+   * @param ctx - Conversion context, originally set in Document#toJS()
+   * @param {Class} Type - If set, forces the returned collection type
+   * @returns Instance of Type, Map, or Object
+   */
   toJSON(_, ctx, Type) {
     const map2 = Type ? new Type() : (ctx == null ? void 0 : ctx.mapAsMap) ? /* @__PURE__ */ new Map() : {};
     if (ctx == null ? void 0 : ctx.onCreate)
@@ -7037,6 +7667,14 @@ var YAMLSeq = class extends Collection {
   add(value) {
     this.items.push(value);
   }
+  /**
+   * Removes a value from the collection.
+   *
+   * `key` must contain a representation of an integer for this to succeed.
+   * It may be wrapped in a `Scalar`.
+   *
+   * @returns `true` if the item was found and removed.
+   */
   delete(key) {
     const idx = asItemIndex(key);
     if (typeof idx !== "number")
@@ -7051,10 +7689,23 @@ var YAMLSeq = class extends Collection {
     const it = this.items[idx];
     return !keepScalar && isScalar(it) ? it.value : it;
   }
+  /**
+   * Checks if the collection includes a value with the key `key`.
+   *
+   * `key` must contain a representation of an integer for this to succeed.
+   * It may be wrapped in a `Scalar`.
+   */
   has(key) {
     const idx = asItemIndex(key);
     return typeof idx === "number" && idx < this.items.length;
   }
+  /**
+   * Sets a value in this collection. For `!!set`, `value` needs to be a
+   * boolean to add/remove the item from the set.
+   *
+   * If `key` does not contain a representation of an integer, this will throw.
+   * It may be wrapped in a `Scalar`.
+   */
   set(key, value) {
     const idx = asItemIndex(key);
     if (typeof idx !== "number")
@@ -7331,8 +7982,17 @@ var schema2 = [map, seq].concat(jsonScalars, jsonError);
 // node_modules/yaml/browser/dist/schema/yaml-1.1/binary.js
 var binary = {
   identify: (value) => value instanceof Uint8Array,
+  // Buffer inherits from Uint8Array
   default: false,
   tag: "tag:yaml.org,2002:binary",
+  /**
+   * Returns a Buffer in node and an Uint8Array in browsers
+   *
+   * To use the resulting buffer as an image, you'll want to do something like:
+   *
+   *   const blob = new Blob([buffer], { type: 'image/jpeg' })
+   *   document.querySelector('#photo').src = URL.createObjectURL(blob)
+   */
   resolve(src, onError) {
     if (typeof atob === "function") {
       const str = atob(src.replace(/[\n\r]/g, ""));
@@ -7440,7 +8100,7 @@ var pairs = {
 };
 
 // node_modules/yaml/browser/dist/schema/yaml-1.1/omap.js
-var YAMLOMap = class extends YAMLSeq {
+var YAMLOMap = class _YAMLOMap extends YAMLSeq {
   constructor() {
     super();
     this.add = YAMLMap.prototype.add.bind(this);
@@ -7448,8 +8108,12 @@ var YAMLOMap = class extends YAMLSeq {
     this.get = YAMLMap.prototype.get.bind(this);
     this.has = YAMLMap.prototype.has.bind(this);
     this.set = YAMLMap.prototype.set.bind(this);
-    this.tag = YAMLOMap.tag;
+    this.tag = _YAMLOMap.tag;
   }
+  /**
+   * If `ctx` is given, the return type is actually `Map<unknown, unknown>`,
+   * but TypeScript won't allow widening the signature of a child method.
+   */
   toJSON(_, ctx) {
     if (!ctx)
       return super.toJSON(_);
@@ -7634,10 +8298,10 @@ var intHex2 = {
 };
 
 // node_modules/yaml/browser/dist/schema/yaml-1.1/set.js
-var YAMLSet = class extends YAMLMap {
+var YAMLSet = class _YAMLSet extends YAMLMap {
   constructor(schema4) {
     super(schema4);
-    this.tag = YAMLSet.tag;
+    this.tag = _YAMLSet.tag;
   }
   add(key) {
     let pair;
@@ -7651,6 +8315,10 @@ var YAMLSet = class extends YAMLMap {
     if (!prev)
       this.items.push(pair);
   }
+  /**
+   * If `keepPair` is `true`, returns the Pair matching `key`.
+   * Otherwise, returns the value of that Pair's key.
+   */
   get(key, keepPair) {
     const pair = findPair(this.items, key);
     return !keepPair && isPair(pair) ? isScalar(pair.key) ? pair.key.value : pair.key : pair;
@@ -7764,6 +8432,9 @@ var timestamp = {
   identify: (value) => value instanceof Date,
   default: true,
   tag: "tag:yaml.org,2002:timestamp",
+  // If the time zone is omitted, the timestamp is assumed to be specified in UTC. The time part
+  // may be omitted altogether, resulting in a date format. In such a case, the time part is
+  // assumed to be 00:00:00Z (start of day, UTC).
   test: RegExp("^([0-9]{4})-([0-9]{1,2})-([0-9]{1,2})(?:(?:t|T|[ \\t]+)([0-9]{1,2}):([0-9]{1,2}):([0-9]{1,2}(\\.[0-9]+)?)(?:[ \\t]*(Z|[-+][012]?[0-9](?::[0-9]{2})?))?)?$"),
   resolve(str) {
     const match = str.match(timestamp.test);
@@ -7885,7 +8556,7 @@ function getTags(customTags, schemaName, addMergeTag) {
 
 // node_modules/yaml/browser/dist/schema/Schema.js
 var sortMapEntriesByKey = (a, b) => a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
-var Schema = class {
+var Schema = class _Schema {
   constructor({ compat, customTags, merge: merge2, resolveKnownTags, schema: schema4, sortMapEntries, toStringDefaults }) {
     this.compat = Array.isArray(compat) ? getTags(compat, "compat") : compat ? getTags(null, compat) : null;
     this.name = typeof schema4 === "string" && schema4 || "core";
@@ -7898,7 +8569,7 @@ var Schema = class {
     this.sortMapEntries = typeof sortMapEntries === "function" ? sortMapEntries : sortMapEntries === true ? sortMapEntriesByKey : null;
   }
   clone() {
-    const copy = Object.create(Schema.prototype, Object.getOwnPropertyDescriptors(this));
+    const copy = Object.create(_Schema.prototype, Object.getOwnPropertyDescriptors(this));
     copy.tags = this.tags.slice();
     return copy;
   }
@@ -7977,7 +8648,7 @@ function stringifyDocument(doc, options) {
 }
 
 // node_modules/yaml/browser/dist/doc/Document.js
-var Document = class {
+var Document = class _Document {
   constructor(value, replacer, options) {
     this.commentBefore = null;
     this.comment = null;
@@ -8012,8 +8683,13 @@ var Document = class {
     this.setSchema(version, options);
     this.contents = value === void 0 ? null : this.createNode(value, _replacer, options);
   }
+  /**
+   * Create a deep copy of this Document and its contents.
+   *
+   * Custom Node values that inherit from `Object` still refer to their original instances.
+   */
   clone() {
-    const copy = Object.create(Document.prototype, {
+    const copy = Object.create(_Document.prototype, {
       [NODE_TYPE]: { value: DOC }
     });
     copy.commentBefore = this.commentBefore;
@@ -8029,18 +8705,30 @@ var Document = class {
       copy.range = this.range.slice();
     return copy;
   }
+  /** Adds a value to the document. */
   add(value) {
     if (assertCollection(this.contents))
       this.contents.add(value);
   }
+  /** Adds a value to the document. */
   addIn(path, value) {
     if (assertCollection(this.contents))
       this.contents.addIn(path, value);
   }
+  /**
+   * Create a new `Alias` node, ensuring that the target `node` has the required anchor.
+   *
+   * If `node` already has an anchor, `name` is ignored.
+   * Otherwise, the `node.anchor` value will be set to `name`,
+   * or if an anchor with that name is already present in the document,
+   * `name` will be used as a prefix for a new unique anchor.
+   * If `name` is undefined, the generated anchor will use 'a' as a prefix.
+   */
   createAlias(node, name) {
     if (!node.anchor) {
       const prev = anchorNames(this);
-      node.anchor = !name || prev.has(name) ? findNewAnchor(name || "a", prev) : name;
+      node.anchor = // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+      !name || prev.has(name) ? findNewAnchor(name || "a", prev) : name;
     }
     return new Alias(node.anchor);
   }
@@ -8060,7 +8748,11 @@ var Document = class {
       replacer = void 0;
     }
     const { aliasDuplicateObjects, anchorPrefix, flow, keepUndefined, onTagObj, tag } = options != null ? options : {};
-    const { onAnchor, setAnchors, sourceObjects } = createNodeAnchors(this, anchorPrefix || "a");
+    const { onAnchor, setAnchors, sourceObjects } = createNodeAnchors(
+      this,
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+      anchorPrefix || "a"
+    );
     const ctx = {
       aliasDuplicateObjects: aliasDuplicateObjects != null ? aliasDuplicateObjects : true,
       keepUndefined: keepUndefined != null ? keepUndefined : false,
@@ -8076,14 +8768,26 @@ var Document = class {
     setAnchors();
     return node;
   }
+  /**
+   * Convert a key and a value into a `Pair` using the current schema,
+   * recursively wrapping all values as `Scalar` or `Collection` nodes.
+   */
   createPair(key, value, options = {}) {
     const k = this.createNode(key, null, options);
     const v = this.createNode(value, null, options);
     return new Pair(k, v);
   }
+  /**
+   * Removes a value from the document.
+   * @returns `true` if the item was found and removed.
+   */
   delete(key) {
     return assertCollection(this.contents) ? this.contents.delete(key) : false;
   }
+  /**
+   * Removes a value from the document.
+   * @returns `true` if the item was found and removed.
+   */
   deleteIn(path) {
     if (isEmptyPath(path)) {
       if (this.contents == null)
@@ -8093,22 +8797,42 @@ var Document = class {
     }
     return assertCollection(this.contents) ? this.contents.deleteIn(path) : false;
   }
+  /**
+   * Returns item at `key`, or `undefined` if not found. By default unwraps
+   * scalar values from their surrounding node; to disable set `keepScalar` to
+   * `true` (collections are always returned intact).
+   */
   get(key, keepScalar) {
     return isCollection(this.contents) ? this.contents.get(key, keepScalar) : void 0;
   }
+  /**
+   * Returns item at `path`, or `undefined` if not found. By default unwraps
+   * scalar values from their surrounding node; to disable set `keepScalar` to
+   * `true` (collections are always returned intact).
+   */
   getIn(path, keepScalar) {
     if (isEmptyPath(path))
       return !keepScalar && isScalar(this.contents) ? this.contents.value : this.contents;
     return isCollection(this.contents) ? this.contents.getIn(path, keepScalar) : void 0;
   }
+  /**
+   * Checks if the document includes a value with the key `key`.
+   */
   has(key) {
     return isCollection(this.contents) ? this.contents.has(key) : false;
   }
+  /**
+   * Checks if the document includes a value at `path`.
+   */
   hasIn(path) {
     if (isEmptyPath(path))
       return this.contents !== void 0;
     return isCollection(this.contents) ? this.contents.hasIn(path) : false;
   }
+  /**
+   * Sets a value in this document. For `!!set`, `value` needs to be a
+   * boolean to add/remove the item from the set.
+   */
   set(key, value) {
     if (this.contents == null) {
       this.contents = collectionFromPath(this.schema, [key], value);
@@ -8116,6 +8840,10 @@ var Document = class {
       this.contents.set(key, value);
     }
   }
+  /**
+   * Sets a value in this document. For `!!set`, `value` needs to be a
+   * boolean to add/remove the item from the set.
+   */
   setIn(path, value) {
     if (isEmptyPath(path)) {
       this.contents = value;
@@ -8125,6 +8853,13 @@ var Document = class {
       this.contents.setIn(path, value);
     }
   }
+  /**
+   * Change the YAML version and schema used by the document.
+   * A `null` version disables support for directives, explicit tags, anchors, and aliases.
+   * It also requires the `schema` option to be given as a `Schema` instance value.
+   *
+   * Overrides all previously set schema options.
+   */
   setSchema(version, options = {}) {
     if (typeof version === "number")
       version = String(version);
@@ -8162,6 +8897,7 @@ var Document = class {
     else
       throw new Error(`With a null YAML version, the { schema: Schema } option is required`);
   }
+  // json & jsonArg are only used from toJSON()
   toJS({ json, jsonArg, mapAsMap, maxAliasCount, onAnchor, reviver } = {}) {
     const ctx = {
       anchors: /* @__PURE__ */ new Map(),
@@ -8177,9 +8913,16 @@ var Document = class {
         onAnchor(res2, count);
     return typeof reviver === "function" ? applyReviver(reviver, { "": res }, "", res) : res;
   }
+  /**
+   * A JSON representation of the document `contents`.
+   *
+   * @param jsonArg Used by `JSON.stringify` to indicate the array index or
+   *   property name.
+   */
   toJSON(jsonArg, onAnchor) {
     return this.toJS({ json: true, jsonArg, mapAsMap: false, onAnchor });
   }
+  /** A YAML representation of the document. */
   toString(options = {}) {
     if (this.errors.length > 0)
       throw new Error("Document with errors cannot be stringified");
@@ -8352,6 +9095,7 @@ function resolveProps(tokens, { flow, indicator, next, offset, onError, parentIn
           hasSpace = false;
           break;
         }
+      // else fallthrough
       default:
         onError(token, "UNEXPECTED_TOKEN", `Unexpected ${token.type} token`);
         atNewline = false;
@@ -8656,7 +9400,12 @@ function resolveFlowCollection({ composeNode: composeNode2, composeEmptyNode: co
         continue;
       }
       if (!isMap2 && ctx.options.strict && containsNewline(key))
-        onError(key, "MULTILINE_IMPLICIT_KEY", "Implicit keys of flow sequence pairs need to be on a single line");
+        onError(
+          key,
+          // checked by containsNewline()
+          "MULTILINE_IMPLICIT_KEY",
+          "Implicit keys of flow sequence pairs need to be on a single line"
+        );
     }
     if (i === 0) {
       if (props.comma)
@@ -8666,19 +9415,18 @@ function resolveFlowCollection({ composeNode: composeNode2, composeEmptyNode: co
         onError(props.start, "MISSING_CHAR", `Missing , between ${fcName} items`);
       if (props.comment) {
         let prevItemComment = "";
-        loop:
-          for (const st of start) {
-            switch (st.type) {
-              case "comma":
-              case "space":
-                break;
-              case "comment":
-                prevItemComment = st.source.substring(1);
-                break loop;
-              default:
-                break loop;
-            }
+        loop: for (const st of start) {
+          switch (st.type) {
+            case "comma":
+            case "space":
+              break;
+            case "comment":
+              prevItemComment = st.source.substring(1);
+              break loop;
+            default:
+              break loop;
           }
+        }
         if (prevItemComment) {
           let prev = coll.items[coll.items.length - 1];
           if (isPair(prev))
@@ -8979,6 +9727,7 @@ function parseBlockScalarHeader({ offset, props }, strict, onError) {
     switch (token.type) {
       case "space":
         hasSpace = true;
+      // fallthrough
       case "newline":
         length += token.source.length;
         break;
@@ -8994,6 +9743,7 @@ function parseBlockScalarHeader({ offset, props }, strict, onError) {
         onError(token, "UNEXPECTED_TOKEN", token.message);
         length += token.source.length;
         break;
+      /* istanbul ignore next should not happen */
       default: {
         const message = `Unexpected token in block scalar header: ${token.type}`;
         onError(token, "UNEXPECTED_TOKEN", message);
@@ -9035,6 +9785,7 @@ function resolveFlowScalar(scalar, strict, onError) {
       _type = Scalar.QUOTE_DOUBLE;
       value = doubleQuotedValue(source, _onError);
       break;
+    /* istanbul ignore next should not happen */
     default:
       onError(scalar, "UNEXPECTED_TOKEN", `Expected a flow scalar value, but found: ${type}`);
       return {
@@ -9056,6 +9807,7 @@ function resolveFlowScalar(scalar, strict, onError) {
 function plainValue(source, onError) {
   let badChar = "";
   switch (source[0]) {
+    /* istanbul ignore next should not happen */
     case "	":
       badChar = "a tab character";
       break;
@@ -9183,18 +9935,31 @@ function foldNewline(source, offset) {
 }
 var escapeCodes = {
   "0": "\0",
+  // null character
   a: "\x07",
+  // bell character
   b: "\b",
+  // backspace
   e: "\x1B",
+  // escape character
   f: "\f",
+  // form feed
   n: "\n",
+  // line feed
   r: "\r",
+  // carriage return
   t: "	",
+  // horizontal tab
   v: "\v",
+  // vertical tab
   N: "\x85",
+  // Unicode next line
   _: "\xA0",
+  // Unicode non-breaking space
   L: "\u2028",
+  // Unicode line separator
   P: "\u2029",
+  // Unicode paragraph separator
   " ": " ",
   '"': '"',
   "/": "/",
@@ -9522,6 +10287,11 @@ ${cb}` : comment;
     this.errors = [];
     this.warnings = [];
   }
+  /**
+   * Current stream status information.
+   *
+   * Mostly useful at the end of input for an empty stream.
+   */
   streamInfo() {
     return {
       comment: parsePrelude(this.prelude).comment,
@@ -9530,11 +10300,18 @@ ${cb}` : comment;
       warnings: this.warnings
     };
   }
+  /**
+   * Compose tokens into documents.
+   *
+   * @param forceDoc - If the stream contains no document, still emit a final document including any comments and directives that would be applied to a subsequent document.
+   * @param endOffset - Should be set if `forceDoc` is also set, to set the document range end and to indicate errors correctly.
+   */
   *compose(tokens, forceDoc = false, endOffset = -1) {
     for (const token of tokens)
       yield* this.next(token);
     yield* this.end(forceDoc, endOffset);
   }
+  /** Advance the composer by one CST token. */
   *next(token) {
     switch (token.type) {
       case "directive":
@@ -9594,6 +10371,12 @@ ${end.comment}` : end.comment;
         this.errors.push(new YAMLParseError(getErrorPos(token), "UNEXPECTED_TOKEN", `Unsupported token ${token.type}`));
     }
   }
+  /**
+   * Call at end of input to yield any remaining document.
+   *
+   * @param forceDoc - If the stream contains no document, still emit a final document including any comments and directives that would be applied to a subsequent document.
+   * @param endOffset - Should be set if `forceDoc` is also set, to set the document range end and to indicate errors correctly.
+   */
   *end(forceDoc = false, endOffset = -1) {
     if (this.doc) {
       this.decorate(this.doc, true);
@@ -9612,9 +10395,9 @@ ${end.comment}` : end.comment;
 };
 
 // node_modules/yaml/browser/dist/parse/cst-visit.js
-var BREAK2 = Symbol("break visit");
-var SKIP2 = Symbol("skip children");
-var REMOVE2 = Symbol("remove item");
+var BREAK2 = /* @__PURE__ */ Symbol("break visit");
+var SKIP2 = /* @__PURE__ */ Symbol("skip children");
+var REMOVE2 = /* @__PURE__ */ Symbol("remove item");
 function visit2(cst, visitor) {
   if ("type" in cst && cst.type === "document")
     cst = { start: cst.start, value: cst.value };
@@ -9764,6 +10547,12 @@ var Lexer = class {
     this.next = null;
     this.pos = 0;
   }
+  /**
+   * Generate YAML tokens from the `source` string. If `incomplete`,
+   * a part of the last line may be left as a buffer for the next call.
+   *
+   * @returns A generator of lexical tokens
+   */
   *lex(source, incomplete = false) {
     var _a;
     if (source) {
@@ -9938,6 +10727,7 @@ var Lexer = class {
     switch (line[n]) {
       case "#":
         yield* this.pushCount(line.length - n);
+      // fallthrough
       case void 0:
         yield* this.pushNewline();
         return yield* this.parseLineStart();
@@ -10033,6 +10823,7 @@ var Lexer = class {
           return "flow";
         }
       }
+      // fallthrough
       default:
         this.flowKey = false;
         return yield* this.parsePlainScalar();
@@ -10094,27 +10885,27 @@ var Lexer = class {
     let nl = this.pos - 1;
     let indent = 0;
     let ch;
-    loop:
-      for (let i2 = this.pos; ch = this.buffer[i2]; ++i2) {
-        switch (ch) {
-          case " ":
-            indent += 1;
+    loop: for (let i2 = this.pos; ch = this.buffer[i2]; ++i2) {
+      switch (ch) {
+        case " ":
+          indent += 1;
+          break;
+        case "\n":
+          nl = i2;
+          indent = 0;
+          break;
+        case "\r": {
+          const next = this.buffer[i2 + 1];
+          if (!next && !this.atEnd)
+            return this.setNext("block-scalar");
+          if (next === "\n")
             break;
-          case "\n":
-            nl = i2;
-            indent = 0;
-            break;
-          case "\r": {
-            const next = this.buffer[i2 + 1];
-            if (!next && !this.atEnd)
-              return this.setNext("block-scalar");
-            if (next === "\n")
-              break;
-          }
-          default:
-            break loop;
         }
+        // fallthrough
+        default:
+          break loop;
       }
+    }
     if (!ch && !this.atEnd)
       return this.setNext("block-scalar");
     if (indent >= this.indentNext) {
@@ -10228,7 +11019,9 @@ var Lexer = class {
       case "&":
         return (yield* this.pushUntil(isNotAnchorChar)) + (yield* this.pushSpaces(true)) + (yield* this.pushIndicators());
       case "-":
+      // this is an error
       case "?":
+      // this is an error outside flow collections
       case ":": {
         const inFlow = this.flowLevel > 0;
         const ch1 = this.charAt(1);
@@ -10363,6 +11156,7 @@ function getPrevProps(parent) {
     }
     case "block-seq":
       return parent.items[parent.items.length - 1].start;
+    /* istanbul ignore next should not happen */
     default:
       return [];
   }
@@ -10372,17 +11166,16 @@ function getFirstKeyStartProps(prev) {
   if (prev.length === 0)
     return [];
   let i = prev.length;
-  loop:
-    while (--i >= 0) {
-      switch (prev[i].type) {
-        case "doc-start":
-        case "explicit-key-ind":
-        case "map-value-ind":
-        case "seq-item-ind":
-        case "newline":
-          break loop;
-      }
+  loop: while (--i >= 0) {
+    switch (prev[i].type) {
+      case "doc-start":
+      case "explicit-key-ind":
+      case "map-value-ind":
+      case "seq-item-ind":
+      case "newline":
+        break loop;
     }
+  }
   while (((_a = prev[++i]) == null ? void 0 : _a.type) === "space") {
   }
   return prev.splice(i, prev.length);
@@ -10407,6 +11200,10 @@ function fixFlowSeqItems(fc) {
   }
 }
 var Parser = class {
+  /**
+   * @param onNewLine - If defined, called separately with the start position of
+   *   each new line (in `parse()`, including the start of input).
+   */
   constructor(onNewLine) {
     this.atNewLine = true;
     this.atScalar = false;
@@ -10419,6 +11216,14 @@ var Parser = class {
     this.lexer = new Lexer();
     this.onNewLine = onNewLine;
   }
+  /**
+   * Parse `source` as a YAML stream.
+   * If `incomplete`, a part of the last line may be left as a buffer for the next call.
+   *
+   * Errors are not thrown, but yielded as `{ type: 'error', message }` tokens.
+   *
+   * @returns A generator of tokens representing each directive, document, and other structure.
+   */
   *parse(source, incomplete = false) {
     if (this.onNewLine && this.offset === 0)
       this.onNewLine(0);
@@ -10427,6 +11232,9 @@ var Parser = class {
     if (!incomplete)
       yield* this.end();
   }
+  /**
+   * Advance the parser by the `source` of one lexical token.
+   */
   *next(source) {
     this.source = source;
     if (this.atScalar) {
@@ -10473,6 +11281,7 @@ var Parser = class {
       this.offset += source.length;
     }
   }
+  /** Call at end of input to push out any remaining constructions */
   *end() {
     while (this.stack.length > 0)
       yield* this.pop();
@@ -10580,6 +11389,7 @@ var Parser = class {
             Object.assign(it, { key: token, sep: [] });
           return;
         }
+        /* istanbul ignore next should not happen */
         default:
           yield* this.pop();
           yield* this.pop(token);
@@ -10701,6 +11511,7 @@ var Parser = class {
         }
         yield* this.pop();
         break;
+      /* istanbul ignore next should not happen */
       default:
         yield* this.pop();
         yield* this.step();
@@ -11148,6 +11959,7 @@ var Parser = class {
         break;
       case "newline":
         this.onKeyLine = false;
+      // fallthrough
       case "space":
       case "comment":
       default:
@@ -11305,11 +12117,9 @@ var parseLink = (text) => {
 };
 var createMenu = (menu, editor) => {
   const selection = editor.getSelection();
-  if (selection.length === 0)
-    return;
+  if (selection.length === 0) return;
   const parsedLink = parseLink(selection);
-  if (!parsedLink)
-    return;
+  if (!parsedLink) return;
   if (parsedLink.url.startsWith("obsidian://opengate")) {
     menu.addItem((item) => {
       item.setTitle("Convert to normal link").onClick(async () => {
@@ -11350,16 +12160,22 @@ var ModalInsertLink = class extends import_obsidian21.Modal {
   }
   createFormInsertLink() {
     let gateOptions = createEmptyGateOption();
-    new import_obsidian21.Setting(this.contentEl).setName("URL").setClass("open-gate--form-field").addText((text) => text.setPlaceholder("https://example.com").onChange(async (value) => {
-      gateOptions.url = value;
-    }));
-    new import_obsidian21.Setting(this.contentEl).setName("Title").setClass("open-gate--form-field").addText((text) => text.onChange(async (value) => {
-      gateOptions.title = value;
-    }));
-    new import_obsidian21.Setting(this.contentEl).addButton((btn) => btn.setButtonText("Insert Link").setCta().onClick(async () => {
-      gateOptions = normalizeGateOption(gateOptions);
-      this.onSubmit(gateOptions);
-    }));
+    new import_obsidian21.Setting(this.contentEl).setName("URL").setClass("open-gate--form-field").addText(
+      (text) => text.setPlaceholder("https://example.com").onChange(async (value) => {
+        gateOptions.url = value;
+      })
+    );
+    new import_obsidian21.Setting(this.contentEl).setName("Title").setClass("open-gate--form-field").addText(
+      (text) => text.onChange(async (value) => {
+        gateOptions.title = value;
+      })
+    );
+    new import_obsidian21.Setting(this.contentEl).addButton(
+      (btn) => btn.setButtonText("Insert Link").setCta().onClick(async () => {
+        gateOptions = normalizeGateOption(gateOptions);
+        this.onSubmit(gateOptions);
+      })
+    );
   }
 };
 
@@ -11417,12 +12233,15 @@ var OpenGatePlugin = class extends import_obsidian22.Plugin {
       const gate = this.settings.gates[gateId];
       registerGate(this, gate);
     }
-    registerGate(this, normalizeGateOption({
-      id: "temp-gate",
-      title: "Temp Gate",
-      icon: "globe",
-      url: "about:blank"
-    }));
+    registerGate(
+      this,
+      normalizeGateOption({
+        id: "temp-gate",
+        title: "Temp Gate",
+        icon: "globe",
+        url: "about:blank"
+      })
+    );
   }
   registerCommands() {
     this.addCommand({
@@ -11445,6 +12264,11 @@ var OpenGatePlugin = class extends import_obsidian22.Plugin {
       }
     });
   }
+  /**
+   * Register the "opengate" action to Obsidian.
+   *
+   * We will attempt to open a gate based on the provided title and navigate to the provided URL
+   */
   registerProtocol() {
     this.registerObsidianProtocolHandler("opengate", this.handleCustomProtocol.bind(this));
   }
@@ -11454,7 +12278,9 @@ var OpenGatePlugin = class extends import_obsidian22.Plugin {
     if (id && this.settings.gates[id]) {
       targetGate = this.settings.gates[id];
     } else {
-      targetGate = Object.values(this.settings.gates).find((gate) => title && gate.title.toLowerCase() === title.toLowerCase() || url && gate.url.toLowerCase() === url.toLowerCase());
+      targetGate = Object.values(this.settings.gates).find(
+        (gate) => title && gate.title.toLowerCase() === title.toLowerCase() || url && gate.url.toLowerCase() === url.toLowerCase()
+      );
     }
     if (!targetGate) {
       targetGate = createEmptyGateOption();
@@ -11471,7 +12297,7 @@ var OpenGatePlugin = class extends import_obsidian22.Plugin {
     return Object.values(this.settings.gates).find((gate) => gate[field].toLowerCase() === value.toLowerCase());
   }
   async handleCustomProtocol(data) {
-    let targetGate = this.getGateOptionFromProtocolData(data);
+    const targetGate = this.getGateOptionFromProtocolData(data);
     if (targetGate === void 0) {
       if (!data.url) {
         new import_obsidian22.Notice("Missing url parameter");

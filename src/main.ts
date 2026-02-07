@@ -150,7 +150,7 @@ export default class OpenGatePlugin extends Plugin {
     }
 
     async handleCustomProtocol(data: ObsidianProtocolData) {
-        let targetGate = this.getGateOptionFromProtocolData(data)
+        const targetGate = this.getGateOptionFromProtocolData(data)
         if (targetGate === undefined) {
             if (!data.url) {
                 new Notice('Missing url parameter')
